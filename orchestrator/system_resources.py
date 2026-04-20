@@ -1,14 +1,9 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
 from pathlib import Path
-from queue import Queue
-from typing import Any, Dict, List, Optional
-import json
+from typing import Optional
 import os
 import platform
-import shutil
 import subprocess
 
 
@@ -42,14 +37,22 @@ class SystemResourceDetector:
         return max(1, fallback)
 
     @staticmethod
-    def recommended_worker_count(requested: int, case_count: int) -> int:
+    def recommended_worker_count(
+        requested: int,
+        case_count: int,
+        prefer_physical_cores: bool = True,
+    ) -> int:
         requested = max(1, int(requested))
         case_count = max(1, int(case_count))
 
-        physical = SystemResourceDetector.physical_core_count()
-        safe_physical = max(1, physical - 2) if physical > 2 else 1
+        if prefer_physical_cores:
+            physical = SystemResourceDetector.physical_core_count()
+            safe_limit = max(1, physical - 2) if physical > 2 else 1
+        else:
+            logical = os.cpu_count() or 1
+            safe_limit = max(1, logical - 2) if logical > 2 else 1
 
-        return max(1, min(requested, safe_physical, case_count))
+        return max(1, min(requested, safe_limit, case_count))
 
     @staticmethod
     def _linux_physical_cores() -> Optional[int]:

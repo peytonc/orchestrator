@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from decimal import Decimal
 from itertools import product
-from pathlib import Path
 from random import Random
-from typing import Any, Dict, Iterable, Iterator, List, Sequence, Tuple
+from typing import Any, Dict, Iterator, List, Sequence
+
+from .config import ControlConfig, ControlError, VariableSpec
+from .sampling import DistributionSampler
 
 
 class CaseGenerator:
@@ -76,7 +77,6 @@ class CaseGenerator:
         auto_index = 0
         for var in sweep_vars:
             group_name = str(var.data.get("group", "")).strip()
-            iteration = str(var.data.get("iteration", "cartesian")).strip().lower()
 
             if group_name:
                 grouped.setdefault(group_name, []).append(var)

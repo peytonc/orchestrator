@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Set
+from typing import TYPE_CHECKING, Set
 import re
 
 
@@ -38,12 +38,16 @@ class TemplateLoader:
         # Catch malformed placeholder-like text such as {{bad_name}} or {{NAME-1}}
         malformed = re.findall(r"\{\{([^}]+)\}\}", text)
         for token in malformed:
-            if not .match(token):
+            if not VALID_NAME_RE.match(token):
                 raise TemplateError(
                     f"invalid placeholder {token!r}; must match {VALID_NAME_RE.pattern}"
                 )
 
         return placeholders
 
-    def validate(self, config: ControlConfig) -> None:
+    def validate(self, config: "ControlConfig") -> None:
         config.validate_against_template(self.placeholders)
+
+
+if TYPE_CHECKING:
+    from .config import ControlConfig

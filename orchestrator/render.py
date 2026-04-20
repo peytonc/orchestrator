@@ -1,8 +1,7 @@
 from pathlib import Path
-from typing import Any, Dict, Set
+from typing import Any, Dict
 
-class TemplateError(ValueError):
-    pass
+from .template import TemplateError, TemplateLoader
 
 class Renderer:
     """

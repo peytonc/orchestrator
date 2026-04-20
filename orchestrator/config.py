@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 import json
 import re
+from collections import Counter
 
 
 PLACEHOLDER_RE = re.compile(r"\{\{([A-Z][A-Z0-9_]*)\}\}")
@@ -157,11 +158,23 @@ class ControlConfig:
             raise ControlError("variables must be a non-empty list")
 
         variables = [VariableSpec.from_dict(item) for item in raw_variables]
+        variable_names = [v.name for v in variables]
+        duplicate_variables = sorted(name for name, count in Counter(variable_names).items() if count > 1)
+        if duplicate_variables:
+            raise ControlError(
+                "variables contains duplicate names: " + ", ".join(duplicate_variables)
+            )
 
         raw_parsing = data.get("parsing", [])
         if not isinstance(raw_parsing, list):
             raise ControlError("parsing must be a list")
         parsing = [ParsingRuleSpec.from_dict(item) for item in raw_parsing]
+        parsing_names = [r.name for r in parsing]
+        duplicate_parsing = sorted(name for name, count in Counter(parsing_names).items() if count > 1)
+        if duplicate_parsing:
+            raise ControlError(
+                "parsing contains duplicate names: " + ", ".join(duplicate_parsing)
+            )
 
         return cls(execution=execution, paths=paths, variables=variables, parsing=parsing)
 
@@ -175,11 +188,17 @@ class ControlConfig:
     def variable_names(self) -> Set[str]:
         return {v.name for v in self.variables}
 
-    def validate_against_template(self, template_placeholders: Set[str]) -> None:
+    def validate_against_template(
+        self,
+        template_placeholders: Set[str],
+        reserved_placeholders: Optional[Set[str]] = None,
+    ) -> None:
+        reserved = reserved_placeholders or set()
         defined = self.variable_names
 
-        missing = sorted(template_placeholders - defined)
-        extra = sorted(defined - template_placeholders)
+        public_placeholders = template_placeholders - reserved
+        missing = sorted(public_placeholders - defined)
+        extra = sorted(defined - public_placeholders)
 
         if missing:
             raise ControlError(

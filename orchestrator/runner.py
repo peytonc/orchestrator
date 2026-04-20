@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-import csv
-import re
+from typing import Any, Dict, List
+import shlex
 import subprocess
 
 
@@ -43,7 +42,7 @@ class SimulationRunner:
         worker_dir: str | Path,
         input_path: str | Path,
         output_path: str | Path,
-    ) -> Dict[str, Any]:
+    ) -> RunResult:
         worker_dir = Path(worker_dir)
         input_path = Path(input_path)
         output_path = Path(output_path)
@@ -56,7 +55,7 @@ class SimulationRunner:
         # Command convention:
         # The executable is called with the generated input file as the argument.
         # If your Physics executable needs a different calling convention, adjust here.
-        cmd = [self.physics_command, str(input_path)]
+        cmd = shlex.split(self.physics_command) + [str(input_path)]
 
         proc = subprocess.run(
             cmd,
@@ -69,14 +68,17 @@ class SimulationRunner:
         stdout_path.write_text(proc.stdout or "", encoding="utf-8")
         stderr_path.write_text(proc.stderr or "", encoding="utf-8")
 
-        return {
-            "case_id": case_id,
-            "worker_id": worker_id,
-            "worker_dir": worker_dir,
-            "input_path": input_path,
-            "output_path": output_path,
-            "return_code": proc.returncode,
-            "stdout_path": stdout_path,
-            "stderr_path": stderr_path,
-            "success": proc.returncode == 0,
-        }
+        return RunResult(
+            case_id=case_id,
+            worker_id=worker_id,
+            worker_dir=worker_dir,
+            input_path=input_path,
+            output_path=output_path,
+            return_code=proc.returncode,
+            stdout_path=stdout_path,
+            stderr_path=stderr_path,
+            success=proc.returncode == 0,
+            parsed={},
+            warnings=[],
+            errors=[],
+        )
