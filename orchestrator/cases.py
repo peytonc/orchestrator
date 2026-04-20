@@ -181,16 +181,15 @@ class CaseGenerator:
             raise ControlError(f"{var.name!r}: max must be >= min")
 
         values: List[Any] = []
-        current = start
         max_iters = int(spec.get("max_iters", 1000000))
         if max_iters <= 0:
             raise ControlError(f"{var.name!r}: max_iters must be positive")
 
-        for _ in range(max_iters):
+        for i in range(max_iters):
+            current = start + (Decimal(i) * step)
             if current > stop:
                 break
             values.append(self._decimal_to_python(current))
-            current += step
         else:
             raise ControlError(f"{var.name!r}: exceeded max_iters while building sweep values")
 

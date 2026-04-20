@@ -5,7 +5,6 @@ from .config import (
     ExecutionConfig,
     ParsingRuleSpec,
     PathsConfig,
-    TemplateError as ConfigTemplateError,
     VariableSpec,
 )
 from .parser import OutputParser
@@ -19,7 +18,6 @@ from .workflow import WorkflowOrchestrator
 
 __all__ = [
     "CaseGenerator",
-    "ConfigTemplateError",
     "ControlConfig",
     "ControlError",
     "DistributionSampler",
