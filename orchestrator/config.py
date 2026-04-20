@@ -8,15 +8,10 @@ import re
 from collections import Counter
 
 
-PLACEHOLDER_RE = re.compile(r"\{\{([A-Z][A-Z0-9_]*)\}\}")
 VALID_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
 
 
 class ControlError(ValueError):
-    pass
-
-
-class TemplateError(ValueError):
     pass
 
 
