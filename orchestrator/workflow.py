@@ -4,12 +4,18 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from queue import Queue
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 import json
-import os
-import platform
 import shutil
-import subprocess
+
+from .cases import CaseGenerator
+from .config import ControlConfig, ControlError
+from .parser import OutputParser
+from .render import Renderer
+from .results import ResultCollector
+from .runner import SimulationRunner
+from .system_resources import SystemResourceDetector
+from .template import TemplateLoader
 
 
 @dataclass(frozen=True)
@@ -64,6 +70,7 @@ class WorkflowOrchestrator:
         worker_count = SystemResourceDetector.recommended_worker_count(
             requested=self.config.execution.max_cpu_threads,
             case_count=len(cases),
+            prefer_physical_cores=self.config.execution.prefer_physical_cores,
         )
 
         for worker_id in range(1, worker_count + 1):
@@ -91,10 +98,10 @@ class WorkflowOrchestrator:
 
     def _validate_template_and_config(self) -> None:
         template_placeholders = set(self.template_loader.placeholders)
-        public_placeholders = template_placeholders - self._reserved_placeholders
-
-        # Exact match for ordinary placeholders.
-        self.config.validate_against_template(public_placeholders)
+        self.config.validate_against_template(
+            template_placeholders,
+            reserved_placeholders=self._reserved_placeholders,
+        )
 
         # If the template uses OUTPUT_FILENAME, that is handled at runtime.
         # The required output path itself is still defined by paths.physics_output_file.
@@ -140,7 +147,7 @@ class WorkflowOrchestrator:
                 output_path=worker_paths.output_path,
             )
 
-            return_code = int(run_info["return_code"])
+            return_code = int(run_info.return_code)
 
             parsed: Dict[str, Any] = {}
             if worker_paths.output_path.exists():
@@ -167,8 +174,8 @@ class WorkflowOrchestrator:
                 "input_path": worker_paths.input_path,
                 "output_path": worker_paths.output_path,
                 "return_code": return_code,
-                "stdout_path": run_info["stdout_path"],
-                "stderr_path": run_info["stderr_path"],
+                "stdout_path": run_info.stdout_path,
+                "stderr_path": run_info.stderr_path,
                 "parsed": parsed,
                 "warnings": warnings,
                 "errors": errors,

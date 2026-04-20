@@ -1,11 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-import csv
-import re
-import subprocess
 
 
 class ResultCollector:
@@ -61,7 +57,8 @@ class ResultCollector:
 
         results_file = Path(results_file)
         results_file.parent.mkdir(parents=True, exist_ok=True)
+        ordered = sorted(self._records, key=lambda item: int(item.get("case_id", 0)))
         results_file.write_text(
-            json.dumps(self._records, indent=2, ensure_ascii=False),
+            json.dumps(ordered, indent=2, ensure_ascii=False),
             encoding="utf-8",
         )
