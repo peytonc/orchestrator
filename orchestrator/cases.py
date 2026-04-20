@@ -32,6 +32,24 @@ class CaseGenerator:
         self.config = config
         self._master_rng = Random(config.execution.random_seed)
         self._sampler = DistributionSampler()
+        self._validate_mode_variable_compatibility()
+
+    def _validate_mode_variable_compatibility(self) -> None:
+        mode = self.config.execution.mode
+        invalid_kinds_by_mode = {
+            "monte_carlo": "sweep",
+            "sweep": "distribution",
+        }
+        invalid_kind = invalid_kinds_by_mode.get(mode)
+        if not invalid_kind:
+            return
+
+        invalid_names = sorted(v.name for v in self.config.variables if v.kind == invalid_kind)
+        if invalid_names:
+            raise ControlError(
+                f"{mode} mode does not support {invalid_kind} variables: "
+                + ", ".join(invalid_names)
+            )
 
     def iter_cases(self) -> Iterator[Dict[str, Any]]:
         mode = self.config.execution.mode
