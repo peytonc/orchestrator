@@ -58,7 +58,6 @@ class WorkflowOrchestrator:
         self.result_collector = result_collector
 
         self._slot_queue: Queue[int] = Queue()
-        self._reserved_placeholders = {"OUTPUT_FILENAME"}
 
     def run(self) -> List[Dict[str, Any]]:
         self._validate_template_and_config()
@@ -98,10 +97,7 @@ class WorkflowOrchestrator:
 
     def _validate_template_and_config(self) -> None:
         template_placeholders = set(self.template_loader.placeholders)
-        self.config.validate_against_template(
-            template_placeholders,
-            reserved_placeholders=self._reserved_placeholders,
-        )
+        self.config.validate_against_template(template_placeholders)
 
         # If the template uses OUTPUT_FILENAME, that is handled at runtime.
         # The required output path itself is still defined by paths.physics_output_file.
@@ -133,8 +129,7 @@ class WorkflowOrchestrator:
         try:
             runtime_values = dict(case["values"])
 
-            if "OUTPUT_FILENAME" in self.template_loader.placeholders:
-                runtime_values["OUTPUT_FILENAME"] = str(worker_paths.output_path)
+            runtime_values["OUTPUT_FILENAME"] = str(worker_paths.output_path)
 
             rendered_input = self.renderer.render(runtime_values)
             worker_paths.input_path.write_text(rendered_input, encoding="utf-8")
