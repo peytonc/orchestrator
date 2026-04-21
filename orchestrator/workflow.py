@@ -72,6 +72,7 @@ class WorkflowOrchestrator:
             prefer_physical_cores=self.config.execution.prefer_physical_cores,
         )
 
+        self._slot_queue = Queue()
         for worker_id in range(1, worker_count + 1):
             self._slot_queue.put(worker_id)
 
@@ -97,7 +98,10 @@ class WorkflowOrchestrator:
 
     def _validate_template_and_config(self) -> None:
         template_placeholders = set(self.template_loader.placeholders)
-        self.config.validate_against_template(template_placeholders)
+        self.config.validate_against_template(
+            template_placeholders,
+            reserved_placeholders={"OUTPUT_FILENAME"},
+        )
 
         # If the template uses OUTPUT_FILENAME, that is handled at runtime.
         # The required output path itself is still defined by paths.physics_output_file.
