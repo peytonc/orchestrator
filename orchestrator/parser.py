@@ -18,23 +18,35 @@ class OutputParser:
     """
 
     def parse(self, output_path: str | Path, parsing_rules: List[Any]) -> Dict[str, Any]:
-        output_path = Path(output_path)
-        if not output_path.exists():
-            raise ControlError(f"output file not found: {output_path}")
-
-        text = output_path.read_text(encoding="utf-8", errors="replace")
-        lines = text.splitlines()
+        default_output_path = Path(output_path)
 
         parsed: Dict[str, Any] = {}
         for rule in parsing_rules:
+            rule_output_path = self._resolve_rule_output_path(default_output_path, rule.data)
+            if not rule_output_path.exists():
+                raise ControlError(f"output file not found: {rule_output_path}")
+
             if rule.type == "csv":
-                parsed[rule.name] = self._parse_csv(output_path, rule.data)
+                parsed[rule.name] = self._parse_csv(rule_output_path, rule.data)
             elif rule.type == "regex":
+                text = rule_output_path.read_text(encoding="utf-8", errors="replace")
+                lines = text.splitlines()
                 parsed[rule.name] = self._parse_regex(lines, rule.data)
             else:
                 raise ControlError(f"unsupported parsing rule type: {rule.type!r}")
 
         return parsed
+
+    @staticmethod
+    def _resolve_rule_output_path(default_output_path: Path, spec: Dict[str, Any]) -> Path:
+        target_file = str(spec.get("target_file", "")).strip()
+        if not target_file:
+            return default_output_path
+
+        target_path = Path(target_file)
+        if target_path.is_absolute():
+            return target_path
+        return default_output_path.parent / target_path
 
     def _parse_csv(self, output_path: Path, spec: Dict[str, Any]) -> Dict[str, Any]:
         required_columns = spec.get("columns", {})

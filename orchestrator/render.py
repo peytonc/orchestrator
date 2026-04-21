@@ -14,12 +14,9 @@ class Renderer:
 
     def render(self, values: Dict[str, Any]) -> str:
         missing = sorted(self.placeholders - set(values))
-        extra = sorted(set(values) - self.placeholders)
 
         if missing:
             raise TemplateError("missing values for placeholders: " + ", ".join(missing))
-        if extra:
-            raise TemplateError("extra values provided for template: " + ", ".join(extra))
 
         rendered = self.template_text
         for name in sorted(self.placeholders):

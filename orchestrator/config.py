@@ -193,13 +193,8 @@ class ControlConfig:
 
         public_placeholders = template_placeholders - reserved
         missing = sorted(public_placeholders - defined)
-        extra = sorted(defined - public_placeholders)
 
         if missing:
             raise ControlError(
                 "template placeholders missing from control file: " + ", ".join(missing)
-            )
-        if extra:
-            raise ControlError(
-                "control file variables not used by template: " + ", ".join(extra)
             )

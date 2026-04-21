@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 from itertools import product
+import math
 from random import Random
 from typing import Any, Dict, Iterator, List, Sequence
 
@@ -171,6 +172,16 @@ class CaseGenerator:
                 f"{var.name!r}: sweep variable must define either 'values' or 'min'/'max'/'step'"
             )
 
+        if all(self._is_integral_number(spec[k]) for k in ("min", "max", "step")):
+            start_int = int(spec["min"])
+            stop_int = int(spec["max"])
+            step_int = int(spec["step"])
+            if step_int <= 0:
+                raise ControlError(f"{var.name!r}: step must be > 0")
+            if stop_int < start_int:
+                raise ControlError(f"{var.name!r}: max must be >= min")
+            return list(range(start_int, stop_int + 1, step_int))
+
         start = Decimal(str(spec["min"]))
         stop = Decimal(str(spec["max"]))
         step = Decimal(str(spec["step"]))
@@ -203,3 +214,20 @@ class CaseGenerator:
         if value == value.to_integral_value():
             return int(value)
         return float(value)
+
+    @staticmethod
+    def _is_integral_number(value: Any) -> bool:
+        if isinstance(value, bool):
+            return False
+        if isinstance(value, int):
+            return True
+        if isinstance(value, float):
+            return math.isfinite(value) and value.is_integer()
+        if isinstance(value, str):
+            stripped = value.strip()
+            if not stripped:
+                return False
+            if stripped[0] in "+-":
+                return stripped[1:].isdigit()
+            return stripped.isdigit()
+        return False
