@@ -130,8 +130,6 @@ class WorkflowOrchestrator:
         try:
             runtime_values = dict(case["values"])
 
-            runtime_values["OUTPUT_FILENAME"] = str(worker_paths.output_path)
-
             rendered_input = self.renderer.render(runtime_values)
             worker_paths.input_path.write_text(rendered_input, encoding="utf-8")
 
