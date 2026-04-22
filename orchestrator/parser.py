@@ -161,7 +161,13 @@ class OutputParser:
         if kind in {"text", "str", ""}:
             return text
         if kind in {"int", "integer"}:
-            return int(float(text))
+            try:
+                return int(text)
+            except ValueError:
+                f = float(text)
+                if f != int(f):
+                    raise ControlError(f"cannot losslessly convert {text!r} to int")
+                return int(f)
         if kind in {"float", "number", "double"}:
             return float(text)
         if kind in {"bool", "boolean"}:
