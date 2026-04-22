@@ -225,10 +225,9 @@ class CaseGenerator:
         if isinstance(value, float):
             return math.isfinite(value) and value.is_integer()
         if isinstance(value, str):
-            stripped = value.strip()
-            if not stripped:
+            try:
+                num = float(value)
+                return math.isfinite(num) and num.is_integer()
+            except ValueError:
                 return False
-            if stripped[0] in "+-":
-                return stripped[1:].isdigit()
-            return stripped.isdigit()
         return False
