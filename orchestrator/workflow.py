@@ -98,10 +98,7 @@ class WorkflowOrchestrator:
 
     def _validate_template_and_config(self) -> None:
         template_placeholders = set(self.template_loader.placeholders)
-        self.config.validate_against_template(
-            template_placeholders,
-            reserved_placeholders={"OUTPUT_FILENAME"},
-        )
+        self.config.validate_against_template(template_placeholders)
 
         # If the template uses OUTPUT_FILENAME, that is handled at runtime.
         # The required output path itself is still defined by paths.physics_output_file.
