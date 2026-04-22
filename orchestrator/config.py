@@ -185,10 +185,13 @@ class ControlConfig:
 
     def validate_against_template(self, template_placeholders: Set[str]) -> None:
         defined = self.variable_names
-
-        missing = sorted(missing = sorted(template_placeholders - defined))
-
+        missing = sorted(template_placeholders - defined)
         if missing:
             raise ControlError(
                 "template placeholders missing from control file: " + ", ".join(missing)
+            )
+        extra = sorted(defined - template_placeholders)
+        if extra:
+            raise ControlError(
+                "control file variables not used in template: " + ", ".join(extra)
             )
