@@ -33,7 +33,6 @@ class WorkflowOrchestrator:
       - generate cases
       - run cases in parallel
       - render per-case inputs
-      - inject worker-local OUTPUT_FILENAME when present in the template
       - execute the black-box executable
       - parse outputs
       - collect and write final results
