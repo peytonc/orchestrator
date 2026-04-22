@@ -34,23 +34,6 @@ class Renderer:
         return str(value)
 
     @staticmethod
-    def build_output_filename(
-        worker_dir: str | Path,
-        case_id: int,
-        suffix: str = ".txt",
-        stem_prefix: str = "output_case_",
-    ) -> str:
-        """
-        Builds a local output filename for insertion into {{OUTPUT_FILENAME}}.
-
-        Example:
-            tmp/thread_03/output_case_00017.txt
-        """
-        worker_dir = Path(worker_dir)
-        filename = f"{stem_prefix}{case_id:05d}{suffix}"
-        return str(worker_dir / filename)
-
-    @staticmethod
     def build_generated_input_path(
         worker_dir: str | Path,
         case_id: int,
