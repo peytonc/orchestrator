@@ -45,15 +45,8 @@ class TemplateLoader:
 
         return placeholders
 
-    def validate(
-        self,
-        config: "ControlConfig",
-        reserved_placeholders: Set[str] | None = None,
-    ) -> None:
-        config.validate_against_template(
-            self.placeholders,
-            reserved_placeholders=reserved_placeholders,
-        )
+    def validate(self, config) -> None:
+        config.validate_against_template(self.placeholders)
 
 
 if TYPE_CHECKING:
