@@ -64,7 +64,6 @@ The Physics input template is a plain text file with placeholders such as:
 - `{{TEMPERATURE}}`
 - `{{DISTANCE_1}}`
 - `{{TIME_STEP}}`
-- `{{OUTPUT_FILENAME}}`
 
 The placeholder format is strict:
 
