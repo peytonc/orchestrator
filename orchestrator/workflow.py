@@ -88,7 +88,7 @@ class WorkflowOrchestrator:
         records = self.result_collector.to_list()
         records.sort(key=lambda item: item["case_id"])
 
-        self._write_results_file(records)
+        self.result_collector.write_json(self.config.paths.results_file)
 
         if not self.config.execution.preserve_workdirs:
             self._cleanup_worker_dirs(worker_count)
@@ -215,14 +215,6 @@ class WorkflowOrchestrator:
         stem = base.stem or "physics_output"
         suffix = base.suffix or ".txt"
         return worker_dir / f"{stem}_case_{case_id:05d}{suffix}"
-
-    def _write_results_file(self, records: List[Dict[str, Any]]) -> None:
-        results_file = self.config.paths.results_file
-        results_file.parent.mkdir(parents=True, exist_ok=True)
-        results_file.write_text(
-            json.dumps(records, indent=2, ensure_ascii=False),
-            encoding="utf-8",
-        )
 
     def _cleanup_worker_dirs(self, worker_count: int) -> None:
         root = Path(self.config.execution.worker_dir_root)
