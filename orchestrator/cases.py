@@ -96,12 +96,13 @@ class CaseGenerator:
         auto_index = 0
         for var in sweep_vars:
             group_name = str(var.data.get("group", "")).strip()
-
-            if group_name:
+            iteration = str(var.data.get("iteration", "")).strip().lower()
+            
+            if group_name and iteration == "paired":
                 grouped.setdefault(group_name, []).append(var)
                 continue
-
-            # No explicit group means this variable is independent.
+    
+            # No group, or group present but not explicitly paired → independent.
             auto_key = f"__auto_{auto_index}_{var.name}"
             auto_index += 1
             grouped[auto_key] = [var]
