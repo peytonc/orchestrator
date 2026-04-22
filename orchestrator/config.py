@@ -183,16 +183,10 @@ class ControlConfig:
     def variable_names(self) -> Set[str]:
         return {v.name for v in self.variables}
 
-    def validate_against_template(
-        self,
-        template_placeholders: Set[str],
-        reserved_placeholders: Optional[Set[str]] = None,
-    ) -> None:
-        reserved = reserved_placeholders or set()
+    def validate_against_template(self, template_placeholders: Set[str]) -> None:
         defined = self.variable_names
 
-        public_placeholders = template_placeholders - reserved
-        missing = sorted(public_placeholders - defined)
+        missing = sorted(missing = sorted(template_placeholders - defined))
 
         if missing:
             raise ControlError(
