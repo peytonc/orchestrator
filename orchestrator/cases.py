@@ -4,7 +4,7 @@ from decimal import Decimal
 from itertools import product
 import math
 from random import Random
-from typing import Any, Dict, Iterator, List, Sequence
+from typing import Any, Dict, Iterator, List
 
 from .config import ControlConfig, ControlError, VariableSpec
 from .sampling import DistributionSampler
@@ -86,73 +86,45 @@ class CaseGenerator:
         if not sweep_vars:
             raise ControlError("sweep mode requires at least one sweep variable")
 
-        # Build groups. Variables with the same non-empty group are paired/aligned.
-        # Variables with no group each become their own independent group.
-        grouped: Dict[str, List[VariableSpec]] = {}
-        auto_index = 0
-        for var in sweep_vars:
-            group_name = str(var.data.get("group", "")).strip()
-            iteration = str(var.data.get("iteration", "")).strip().lower()
-            
-            if group_name and iteration == "paired":
-                grouped.setdefault(group_name, []).append(var)
-                continue
-    
-            # No group, or group present but not explicitly paired → independent.
-            auto_key = f"__auto_{auto_index}_{var.name}"
-            auto_index += 1
-            grouped[auto_key] = [var]
+        if len(sweep_vars) == 1:
+            yield from self._iter_single_sweep(sweep_vars[0])
+        else:
+            yield from self._iter_nested_sweep(sweep_vars)
 
-        group_case_blocks: List[List[Dict[str, Any]]] = []
-        for group_name, vars_in_group in grouped.items():
-            group_block = self._expand_group(group_name, vars_in_group)
-            group_case_blocks.append(group_block)
-
+    def _iter_single_sweep(self, var: VariableSpec) -> Iterator[Dict[str, Any]]:
+        """Iterates through every value of one sweep variable."""
         case_id = 1
-        for combo in product(*group_case_blocks):
-            merged: Dict[str, Any] = {}
-            for part in combo:
-                merged.update(part)
-
+        for value in self._sweep_values(var):
             if case_id > self.config.execution.max_cases:
                 break
-
             case_seed = self._master_rng.randrange(1 << 63)
             yield {
                 "case_id": case_id,
                 "seed": case_seed,
                 "mode": "sweep",
-                "values": merged,
+                "values": {var.name: value},
             }
             case_id += 1
 
-    def _expand_group(self, group_name: str, vars_in_group: Sequence[VariableSpec]) -> List[Dict[str, Any]]:
-        if len(vars_in_group) == 1:
-            var = vars_in_group[0]
-            values = self._sweep_values(var)
-            return [{var.name: value} for value in values]
-
-        # Paired / aligned iteration across multiple variables.
-        lengths = []
-        expanded: List[List[Any]] = []
-        for var in vars_in_group:
-            values = self._sweep_values(var)
-            expanded.append(values)
-            lengths.append(len(values))
-
-        if len(set(lengths)) != 1:
-            names = ", ".join(v.name for v in vars_in_group)
-            raise ControlError(
-                f"sweep group {group_name!r} has mismatched value counts for variables: {names}"
-            )
-
-        paired_cases: List[Dict[str, Any]] = []
-        for idx in range(lengths[0]):
-            entry: Dict[str, Any] = {}
-            for var, values in zip(vars_in_group, expanded):
-                entry[var.name] = values[idx]
-            paired_cases.append(entry)
-        return paired_cases
+    def _iter_nested_sweep(self, sweep_vars: List[VariableSpec]) -> Iterator[Dict[str, Any]]:
+        """
+        Nested for-loop iteration (Cartesian product).
+        The first variable in the array is the outermost loop;
+        the last variable is the innermost loop.
+        """
+        all_values = [self._sweep_values(var) for var in sweep_vars]
+        case_id = 1
+        for combo in product(*all_values):
+            if case_id > self.config.execution.max_cases:
+                break
+            case_seed = self._master_rng.randrange(1 << 63)
+            yield {
+                "case_id": case_id,
+                "seed": case_seed,
+                "mode": "sweep",
+                "values": {var.name: val for var, val in zip(sweep_vars, combo)},
+            }
+            case_id += 1
 
     def _sweep_values(self, var: VariableSpec) -> List[Any]:
         spec = var.data
