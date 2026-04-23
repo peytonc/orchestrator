@@ -106,7 +106,6 @@ Each variable includes:
 - `name`
 - `kind`
 - distribution or sweep settings
-- optional group information for paired sweep iteration
 
 ### `parsing`
 
