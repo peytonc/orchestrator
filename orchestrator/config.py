@@ -106,6 +106,14 @@ class VariableSpec:
             )
         if kind not in {"sweep", "distribution"}:
             raise ControlError(f"variable {name!r} has invalid kind {kind!r}")
+            
+        if kind == "sweep":
+            for forbidden in ("group", "iteration"):
+                if forbidden in data:
+                    raise ControlError(
+                        f"variable {name!r}: field {forbidden!r} is not supported; "
+                        "define nesting order by variable position in the array instead"
+                    )
 
         return cls(name=name, kind=kind, data=dict(data))
 
