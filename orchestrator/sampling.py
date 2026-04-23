@@ -75,14 +75,16 @@ class DistributionSampler:
         if max_tries <= 0:
             raise ControlError(f"{name!r}: max_tries must be positive")
 
+        # Fail-fast validation before the loop
+        if low > mean + 4 * stddev or high < mean - 4 * stddev:
+             raise ControlError(f"{name!r}: bounds [{low}, {high}] are too far from mean {mean}. Rejection sampling is unviable.")
+
         for _ in range(max_tries):
             value = rng.gauss(mean, stddev)
             if low <= value <= high:
                 return value
-
-        raise ControlError(
-            f"{name!r}: failed to sample truncated normal inside bounds after {max_tries} tries"
-        )
+        
+        raise ControlError(f"{name!r}: failed to sample truncated normal inside bounds after {max_tries} tries")
 
     @staticmethod
     def _require_number(spec: Dict[str, Any], key: str, name: str) -> float:
