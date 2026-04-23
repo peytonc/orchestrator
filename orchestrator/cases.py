@@ -23,10 +23,6 @@ class CaseGenerator:
           "mode": "monte_carlo" | "sweep",
           "values": { "TEMPERATURE": 300.0, ... }
       }
-
-    Note:
-      OUTPUT_FILENAME is typically injected later by the worker layer because it
-      depends on the per-thread local directory and case id.
     """
 
     def __init__(self, config: ControlConfig):
