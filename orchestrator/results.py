@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+import json
 
 
 class ResultCollector:
@@ -53,8 +54,6 @@ class ResultCollector:
         return list(self._records)
 
     def write_json(self, results_file: str | Path) -> None:
-        import json
-
         results_file = Path(results_file)
         results_file.parent.mkdir(parents=True, exist_ok=True)
         ordered = sorted(self._records, key=lambda item: int(item.get("case_id", 0)))
