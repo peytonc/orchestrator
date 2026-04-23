@@ -95,6 +95,8 @@ class WorkflowOrchestrator:
         return records
 
     def _validate_template_and_config(self) -> None:
+        if not self.template_loader.text:
+            self.template_loader.load()
         template_placeholders = set(self.template_loader.placeholders)
         self.config.validate_against_template(template_placeholders)
         if not self.config.paths.physics_output_file:
