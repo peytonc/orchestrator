@@ -140,13 +140,13 @@ Sweep mode iterates through fixed values or generated ranges.
 
 Supported sweep forms:
 
-- explicit `values`
-- `min` / `max` / `step`
+- explicit `values` list
+- `min` / `max` / `step` range
 
 Sweep behavior supports:
 
-- Cartesian product across independent variables
-- paired iteration for aligned variables
+- Single variable iterates through every value of that variable in order.
+- Nested for-loop produces the full Cartesian product.
 
 ## Parallel execution
 
@@ -384,7 +384,7 @@ This approach is intentionally simple and works well for text logs and summary b
   "paths": {
     "template_file": "templates/physics_template.in",
     "generated_input_file": "generated/physics_case.in",
-    "physics_command": "Physics.exe",
+    "physics_command": "physics.exe",
     "physics_output_file": "physics_output.txt",
     "results_file": "results/monte_carlo_results.json"
   },
@@ -428,13 +428,22 @@ This approach is intentionally simple and works well for text logs and summary b
 }
 ```
 
-## Example control file: sweep with two paired variables
+## Example control file: nested sweep (two variables)
+
+This example is equivalent to the loop:
+
+```
+for X_POS = 1.0 to 10.0 step 0.5
+    for Y_POS = 1.0 to 5.0 step 0.25
+    end
+end
+```
 
 ```json
 {
   "execution": {
     "mode": "sweep",
-    "max_cases": 100,
+    "max_cases": 100000,
     "random_seed": 98765,
     "max_cpu_threads": 999,
     "prefer_physical_cores": true,
@@ -444,42 +453,41 @@ This approach is intentionally simple and works well for text logs and summary b
   "paths": {
     "template_file": "templates/physics_template.in",
     "generated_input_file": "generated/physics_case.in",
-    "physics_command": "Physics.exe",
+    "physics_command": "physics.exe",
     "physics_output_file": "physics_output.txt",
     "results_file": "results/sweep_results.json"
   },
   "variables": [
     {
-      "name": "TEMPERATURE",
+      "name": "X_POS",
       "kind": "sweep",
-      "iteration": "paired",
-      "group": "pair_1",
-      "values": [290.0, 300.0, 310.0, 320.0]
+      "min": 1.0,
+      "max": 10.0,
+      "step": 0.5
     },
     {
-      "name": "PRESSURE",
+      "name": "Y_POS",
       "kind": "sweep",
-      "iteration": "paired",
-      "group": "pair_1",
-      "values": [1.0, 1.2, 1.4, 1.6]
+      "min": 1.0,
+      "max": 5.0,
+      "step": 0.25
     }
   ],
   "parsing": [
     {
       "name": "final_metrics",
       "type": "regex",
-      "target_file": "physics_output.txt",
       "start_pattern": "^RESULT SUMMARY$",
       "context_before": 0,
       "context_after": 6,
       "required": true,
       "captures": {
         "final_energy": {
-          "pattern": "Final Energy\s*=\s*([-+0-9.eE]+)",
+          "pattern": "Final Energy\\s*=\\s*([-+0-9.eE]+)",
           "type": "float"
         },
         "iterations": {
-          "pattern": "Iterations\s*=\s*(\d+)",
+          "pattern": "Iterations\\s*=\\s*(\\d+)",
           "type": "int"
         }
       }
