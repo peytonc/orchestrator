@@ -169,7 +169,10 @@ class OutputParser:
                     raise ControlError(f"cannot losslessly convert {text!r} to int")
                 return int(f)
         if kind in {"float", "number", "double"}:
-            return float(text)
+            try:
+                return float(text)
+            except ValueError:
+                raise ControlError(f"cannot convert {text!r} to float")
         if kind in {"bool", "boolean"}:
             lowered = text.lower()
             if lowered in {"1", "true", "yes", "on"}:
