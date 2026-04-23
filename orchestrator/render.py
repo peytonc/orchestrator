@@ -25,10 +25,6 @@ class Renderer:
                 return self._to_text(values[name])
             return match.group(0)
 
-        missing = sorted(self.placeholders - set(values))
-        if missing:
-            raise TemplateError("missing values for placeholders: " + ", ".join(missing))
-
         return re.sub(r"\{\{([A-Z][A-Z0-9_]*)\}\}", replacer, self.template_text)
 
     @staticmethod
