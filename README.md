@@ -43,20 +43,6 @@ The main goals are:
 - keep the code easy to split into small modules later
 - support both stochastic and deterministic case generation
 
-## Key idea
-
-The Physics executable is treated as a black box.
-
-The Python framework does not try to interpret the Physics model itself. It only:
-
-- prepares the input file
-- launches the executable
-- observes the output file
-- parses result values
-- stores the results
-
-The black box is responsible for reading the generated Physics input file and writing the correct output file.
-
 ## Template system
 
 The Physics input template is a plain text file with placeholders such as:
@@ -72,16 +58,6 @@ The placeholder format is strict:
 - only uppercase names are allowed
 - substitution is literal, not evaluated
 
-### Why this works well
-
-This convention is practical because it is:
-
-- easy to read
-- easy to validate
-- safe for offline use
-- unlikely to conflict with the Physics syntax
-- simple to implement with the standard library
-
 ### Template validation
 
 Before any simulation begins, the framework validates that:
@@ -93,32 +69,11 @@ Before any simulation begins, the framework validates that:
 
 This fail-fast behavior prevents wasted simulation time.
 
-## `OUTPUT_FILENAME`
-
-The control file must always define the output result file path in `paths.physics_output_file`.
-
-If the template also contains `{{OUTPUT_FILENAME}}`, the framework fills it with a worker-local path, such as:
-
-```text
-tmp/thread_03/output_case_00017.txt
-```
-
-This means the Physics input file can direct the black-box executable to write output into the correct isolated worker directory.
-
-The executable itself remains responsible for using the input file and writing the correct output file.
-
 ## Control file
 
 The control file is JSON.
 
 It is designed to be easy to parse with `json` and `dataclasses`, and it should remain clean and explicit.
-
-### Recommended top-level structure
-
-- `execution`
-- `paths`
-- `variables`
-- `parsing`
 
 ### `execution`
 
@@ -260,11 +215,7 @@ project/
 │   │   ├── output_case_00002.txt
 │   │   ├── case_00002.stdout.log
 │   │   └── case_00002.stderr.log
-│   └── thread_03/
-│       ├── input_case_00003.in
-│       ├── output_case_00003.txt
-│       ├── case_00003.stdout.log
-│       └── case_00003.stderr.log
+│   └── ...
 └── results/
     └── results.json
 ```
@@ -313,7 +264,6 @@ Substitutes case values into the template.
 Responsibilities:
 
 - replace placeholders with case values
-- render `OUTPUT_FILENAME`
 - enforce strict missing-variable detection
 
 ### `SimulationRunner`
@@ -389,18 +339,6 @@ The framework supports:
 - paired sweeps where variables advance together
 - Cartesian product of independent sweep groups
 
-### Floating-point step handling
-
-Floating-point range generation is handled carefully to avoid drift.
-
-The implementation should generate values by index rather than by repeated addition.
-
-That helps prevent issues like:
-
-- `0.30000000000000004`
-- missed end points
-- off-by-one errors caused by floating-point accumulation
-
 ## Output parsing
 
 The output parser supports exactly two rule types.
@@ -429,90 +367,6 @@ Behavior:
 - handle missing matches gracefully when allowed
 
 This approach is intentionally simple and works well for text logs and summary blocks.
-
-## Error handling
-
-The project is designed to fail early when possible and record runtime issues per case.
-
-Common validation failures include:
-
-- missing placeholders in the template
-- extra variables in the control file
-- invalid variable names
-- invalid distribution settings
-- sweep length mismatch for paired variables
-- malformed parsing rules
-
-Common runtime failures include:
-
-- executable returns a nonzero exit code
-- output file is missing
-- CSV output is malformed
-- regex extraction fails
-- file creation fails in a worker directory
-
-The framework should keep running remaining cases even if some cases fail.
-
-## Reproducibility
-
-Monte Carlo runs are reproducible.
-
-The same:
-
-- control file
-- template file
-- random seed
-
-will produce the same generated case list.
-
-Parallel execution does not change the generated cases because case generation happens before worker dispatch.
-
-## Standard library only
-
-The implementation uses only Python’s standard library.
-
-Typical modules include:
-
-- `json`
-- `re`
-- `csv`
-- `random`
-- `math`
-- `itertools`
-- `subprocess`
-- `pathlib`
-- `dataclasses`
-- `typing`
-- `copy`
-- `os`
-- `threading`
-- `concurrent.futures`
-- `queue`
-- `decimal`
-
-No external packages are required.
-
-## Planned project structure
-
-A clean implementation can later be split into separate files.
-
-A possible structure is:
-
-```text
-orchestrator/
-├── __init__.py
-├── config.py
-├── template.py
-├── sampling.py
-├── cases.py
-├── render.py
-├── runner.py
-├── parser.py
-├── results.py
-└── workflow.py
-```
-
-This README assumes the classes may initially live in a smaller number of files and later be split into one class per file or one related class group per file.
 
 ## Example control file: Monte Carlo
 
@@ -633,37 +487,3 @@ This README assumes the classes may initially live in a smaller number of files 
   ]
 }
 ```
-
-## Example output file handling
-
-The framework expects the Physics model to write an output file. The output path used by the executable is set through the template placeholder `{{OUTPUT_FILENAME}}` when present.
-
-Example resolved path for a case:
-
-```text
-tmp/thread_03/output_case_00017.txt
-```
-
-This file stays inside the worker directory so that the entire run remains isolated and easy to inspect.
-
-## Intended workflow
-
-1. create a JSON control file
-2. create a Physics template file with placeholders
-3. run `orchestrator`
-4. inspect worker directories if needed
-5. review the aggregated results file
-6. manually delete worker directories after confirming success
-
-## Status
-
-This project is intended as a practical, offline workflow manager for numerical simulation runs.
-
-It is built to be:
-
-- explicit
-- reproducible
-- easy to validate
-- easy to debug
-- easy to extend
-- easy to split into smaller class files later
