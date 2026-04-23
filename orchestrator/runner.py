@@ -75,6 +75,14 @@ class SimulationRunner:
                 success=False, parsed={}, warnings=[],
                 errors=[f"Simulation timed out after {self.timeout_seconds} seconds."]
             )
+        except OSError as exc:
+            return RunResult(
+                case_id=case_id, worker_id=worker_id, worker_dir=worker_dir,
+                input_path=input_path, output_path=output_path,
+                return_code=-1, stdout_path=stdout_path, stderr_path=stderr_path,
+                success=False, parsed={}, warnings=[],
+                errors=[f"Failed to launch simulation command: {exc}"]
+            )
 
         stdout_path.write_text(proc.stdout or "", encoding="utf-8")
         stderr_path.write_text(proc.stderr or "", encoding="utf-8")
