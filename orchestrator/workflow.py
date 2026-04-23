@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from queue import Queue
 from typing import Any, Dict, List
-import json
 import shutil
 
 from .cases import CaseGenerator
@@ -118,12 +117,12 @@ class WorkflowOrchestrator:
     ) -> Dict[str, Any]:
         case_id = int(case["case_id"])
         worker_paths = self._build_worker_paths(worker_id=worker_id, case_id=case_id)
-        worker_paths.worker_dir.mkdir(parents=True, exist_ok=True)
 
         warnings: List[str] = []
         errors: List[str] = []
 
         try:
+            worker_paths.worker_dir.mkdir(parents=True, exist_ok=True)
             runtime_values = dict(case["values"])
 
             rendered_input = self.renderer.render(runtime_values)
