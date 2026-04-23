@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from typing import Any, Dict
 
@@ -18,10 +19,17 @@ class Renderer:
         if missing:
             raise TemplateError("missing values for placeholders: " + ", ".join(missing))
 
-        rendered = self.template_text
-        for name in sorted(self.placeholders):
-            rendered = rendered.replace(f"{{{{{name}}}}}", self._to_text(values[name]))
-        return rendered
+        def replacer(match: re.Match) -> str:
+            name = match.group(1)
+            if name in values:
+                return self._to_text(values[name])
+            return match.group(0)
+
+        missing = sorted(self.placeholders - set(values))
+        if missing:
+            raise TemplateError("missing values for placeholders: " + ", ".join(missing))
+
+        return re.sub(r"\{\{([A-Z][A-Z0-9_]*)\}\}", replacer, self.template_text)
 
     @staticmethod
     def _to_text(value: Any) -> str:
