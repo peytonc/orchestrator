@@ -137,6 +137,8 @@ class WorkflowOrchestrator:
             )
 
             return_code = int(run_info.return_code)
+            errors.extend(run_info.errors)
+            warnings.extend(run_info.warnings)
 
             parsed: Dict[str, Any] = {}
             if worker_paths.output_path.exists():
@@ -153,7 +155,7 @@ class WorkflowOrchestrator:
                 if return_code == 0:
                     errors.append(msg)
 
-            if return_code != 0:
+            if return_code != 0 and not run_info.errors:
                 errors.append(f"physics executable failed with return code {return_code}")
 
             return {
