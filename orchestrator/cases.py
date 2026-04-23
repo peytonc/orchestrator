@@ -170,9 +170,9 @@ class CaseGenerator:
             )
 
         if all(self._is_integral_number(spec[k]) for k in ("min", "max", "step")):
-            start_int = int(spec["min"])
-            stop_int = int(spec["max"])
-            step_int = int(spec["step"])
+            start_int = int(float(spec["min"]))
+            stop_int = int(float(spec["max"]))
+            step_int = int(float(spec["step"]))
             if step_int <= 0:
                 raise ControlError(f"{var.name!r}: step must be > 0")
             if stop_int < start_int:
