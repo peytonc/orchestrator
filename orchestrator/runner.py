@@ -31,7 +31,7 @@ class SimulationRunner:
     output path already chosen inside a worker directory.
     """
 
-    def __init__(self, physics_command: str, timeout_seconds: int | float | None = None):
+    def __init__(self, physics_command: List[str], timeout_seconds: int | float | None = None):
         self.physics_command = physics_command
         self.timeout_seconds = timeout_seconds
 
