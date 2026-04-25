@@ -335,8 +335,7 @@ Sweep mode generates values either from explicit lists or from `min` / `max` / `
 The framework supports:
 
 - simple one-variable sweeps
-- paired sweeps where variables advance together
-- Cartesian product of independent sweep groups
+- Cartesian product of all sweep variables
 
 ## Output parsing
 
