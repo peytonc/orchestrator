@@ -141,7 +141,8 @@ class ParsingRuleSpec:
         if rule_type not in {"csv", "regex"}:
             raise ControlError(f"parsing rule {name!r} has invalid type {rule_type!r}")
 
-        return cls(name=name, type=rule_type, data=dict(data))
+        clean = {k: v for k, v in data.items() if k not in ("name", "type")}
+        return cls(name=name, type=rule_type, data=clean)
 
 
 @dataclass(frozen=True)
