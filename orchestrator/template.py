@@ -2,6 +2,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Set
 import re
 
+if TYPE_CHECKING:
+    from .config import ControlConfig
 
 PLACEHOLDER_RE = re.compile(r"\{\{([A-Z][A-Z0-9_]*)\}\}")
 VALID_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
@@ -47,7 +49,3 @@ class TemplateLoader:
 
     def validate(self, config) -> None:
         config.validate_against_template(self.placeholders)
-
-
-if TYPE_CHECKING:
-    from .config import ControlConfig
