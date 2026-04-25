@@ -95,7 +95,7 @@ class WorkflowOrchestrator:
         return records
 
     def _validate_template_and_config(self) -> None:
-        if not self.template_loader.text:
+        if not self.template_loader.placeholders and not self.template_loader.text:
             self.template_loader.load()
         if not self.template_loader.text:
             raise ControlError("template file is empty")
