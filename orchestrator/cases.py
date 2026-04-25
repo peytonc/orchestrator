@@ -99,7 +99,7 @@ class CaseGenerator:
                 break
             yield {
                 "case_id": case_id,
-                "seed": case_seed,
+                "seed": None,
                 "mode": "sweep",
                 "values": {var.name: value},
             }
@@ -119,7 +119,7 @@ class CaseGenerator:
             case_seed = self._master_rng.randrange(1 << 63)
             yield {
                 "case_id": case_id,
-                "seed": case_seed,
+                "seed": None,
                 "mode": "sweep",
                 "values": {var.name: val for var, val in zip(sweep_vars, combo)},
             }
