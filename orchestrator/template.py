@@ -47,5 +47,5 @@ class TemplateLoader:
 
         return placeholders
 
-    def validate(self, config) -> None:
+    def validate(self, config: "ControlConfig") -> None:
         config.validate_against_template(self.placeholders)
