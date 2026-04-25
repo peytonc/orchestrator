@@ -95,7 +95,7 @@ class WorkflowOrchestrator:
         return records
 
     def _validate_template_and_config(self) -> None:
-        if self.template_loader.text is None or not self.template_loader.placeholders and not self.template_loader.text:
+        if not self.template_loader.text:
             self.template_loader.load()
         if not self.template_loader.text:
             raise ControlError("template file is empty")
@@ -155,9 +155,10 @@ class WorkflowOrchestrator:
                     errors.append(str(exc))
             else:
                 msg = f"output file missing: {worker_paths.output_path}"
-                warnings.append(msg)
                 if return_code == 0:
                     errors.append(msg)
+                else:
+                    warnings.append(msg)
 
             if return_code != 0 and not run_info.errors:
                 errors.append(f"physics executable failed with return code {return_code}")
