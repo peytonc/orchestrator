@@ -78,8 +78,8 @@ class SimulationRunner:
                 errors=[f"Simulation timed out after {self.timeout_seconds} seconds."]
             )
         except OSError as exc:
-            stdout_path.write_text(exc.stdout or "", encoding="utf-8")
-            stderr_path.write_text(exc.stderr or "", encoding="utf-8")
+            stdout_path.write_text("", encoding="utf-8")
+            stderr_path.write_text("", encoding="utf-8")
             return RunResult(
                 case_id=case_id, worker_id=worker_id, worker_dir=worker_dir,
                 input_path=input_path, output_path=output_path,
