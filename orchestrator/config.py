@@ -9,6 +9,7 @@ from collections import Counter
 
 
 VALID_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
+_UNBOUNDED_THREADS = 2 ** 31 - 1  # module-level constant
 
 
 class ControlError(Exception):
@@ -20,7 +21,7 @@ class ExecutionConfig:
     mode: str
     max_cases: int
     random_seed: int
-    max_cpu_threads: int = 999
+    max_cpu_threads: int = _UNBOUNDED_THREADS
     prefer_physical_cores: bool = True
     worker_dir_root: str = "tmp"
     preserve_workdirs: bool = True
@@ -36,7 +37,7 @@ class ExecutionConfig:
             raise ControlError("execution.max_cases must be a positive integer")
 
         random_seed = int(data.get("random_seed", 0))
-        max_cpu_threads = int(data.get("max_cpu_threads", 999))
+        max_cpu_threads = int(data.get("max_cpu_threads", _UNBOUNDED_THREADS))
         if max_cpu_threads <= 0:
             raise ControlError("execution.max_cpu_threads must be a positive integer")
 
