@@ -39,10 +39,9 @@ class OutputParser:
 
     @staticmethod
     def _resolve_rule_output_path(default_output_path: Path, spec: Dict[str, Any]) -> Path:
-        # target_file is not used for per-case path selection; the per-case
-        # output path is always passed in as default_output_path by the workflow.
-        # target_file is reserved for rules that read a separate, fixed-name
-        # companion file. For now the per-case output path is always authoritative.
+        target = spec.get("target_file", "")
+        if target:
+            return Path(str(target).strip())
         return default_output_path
 
     def _parse_csv(self, output_path: Path, spec: Dict[str, Any]) -> Dict[str, Any]:
