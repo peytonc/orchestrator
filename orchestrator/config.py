@@ -59,7 +59,7 @@ class ExecutionConfig:
 class PathsConfig:
     template_file: Path
     generated_input_file: Path
-    physics_command: str
+    physics_command: List[str]
     physics_output_file: Path
     results_file: Path
 
@@ -68,14 +68,19 @@ class PathsConfig:
         try:
             template_file = Path(data["template_file"])
             generated_input_file = Path(data["generated_input_file"])
-            physics_command = str(data["physics_command"]).strip()
+            raw_command = data["physics_command"]
+            if isinstance(raw_command, str):
+                physics_command = [raw_command.strip()]
+            elif isinstance(raw_command, list):
+                physics_command = [str(part) for part in raw_command]
+            else:
+                raise ControlError("paths.physics_command must be a string or array")
+            if not physics_command or not physics_command[0]:
+                raise ControlError("paths.physics_command must not be empty")
             physics_output_file = Path(data["physics_output_file"])
             results_file = Path(data["results_file"])
         except KeyError as exc:
             raise ControlError(f"paths missing required field: {exc.args[0]}") from exc
-
-        if not physics_command:
-            raise ControlError("paths.physics_command must not be empty")
 
         return cls(
             template_file=template_file,
