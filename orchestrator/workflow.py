@@ -101,8 +101,6 @@ class WorkflowOrchestrator:
             raise ControlError("template file is empty")
         template_placeholders = set(self.template_loader.placeholders)
         self.config.validate_against_template(template_placeholders)
-        if not self.config.paths.physics_output_file:
-            raise ControlError("paths.physics_output_file must be defined")
 
     def _run_single_case(self, case: Dict[str, Any]) -> Dict[str, Any]:
         worker_id = self._acquire_worker_id()
