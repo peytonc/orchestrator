@@ -11,7 +11,7 @@ from collections import Counter
 VALID_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
 
 
-class ControlError(ValueError):
+class ControlError(Exception):
     pass
 
 
