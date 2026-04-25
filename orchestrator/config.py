@@ -123,9 +123,6 @@ class VariableSpec:
         clean_data = {k: v for k, v in data.items() if k not in ("name", "kind")}
         return cls(name=name, kind=kind, data=clean_data)
 
-    def is_required_placeholder(self) -> bool:
-        return True
-
 
 @dataclass(frozen=True)
 class ParsingRuleSpec:
