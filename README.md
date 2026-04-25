@@ -153,7 +153,7 @@ The project supports multiple worker threads for running simulations concurrentl
 
 The design is intentionally conservative:
 
-- the control file may request a large number such as `999`
+- the control file may set maximum thread count
 - the framework reduces this to a safe number
 - the final worker count is limited by:
   - the user request
