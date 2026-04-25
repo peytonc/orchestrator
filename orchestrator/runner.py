@@ -53,10 +53,7 @@ class SimulationRunner:
         stdout_path = worker_dir / f"case_{case_id:05d}.stdout.log"
         stderr_path = worker_dir / f"case_{case_id:05d}.stderr.log"
 
-        # Command convention:
-        # The executable is called with the generated input file as the argument.
-        # If your Physics executable needs a different calling convention, adjust here.
-        cmd = shlex.split(self.physics_command) + [str(input_path.resolve())]
+        cmd = list(self.physics_command) + [str(input_path.resolve())]
 
         try:
             proc = subprocess.run(
