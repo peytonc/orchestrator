@@ -33,13 +33,3 @@ class Renderer:
         if isinstance(value, float):
             return format(value, ".15g")
         return str(value)
-
-    @staticmethod
-    def build_generated_input_path(
-        worker_dir: str | Path,
-        case_id: int,
-        suffix: str = ".in",
-        stem_prefix: str = "input_case_",
-    ) -> Path:
-        worker_dir = Path(worker_dir)
-        return worker_dir / f"{stem_prefix}{case_id:05d}{suffix}"
