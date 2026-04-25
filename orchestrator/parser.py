@@ -41,7 +41,10 @@ class OutputParser:
     def _resolve_rule_output_path(default_output_path: Path, spec: Dict[str, Any]) -> Path:
         target = spec.get("target_file", "")
         if target:
-            return Path(str(target).strip())
+            resolved = Path(str(target).strip())
+            if not resolved.is_absolute():
+                resolved = default_output_path.parent / resolved
+            return resolved
         return default_output_path
 
     def _parse_csv(self, output_path: Path, spec: Dict[str, Any]) -> Dict[str, Any]:
