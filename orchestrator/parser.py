@@ -166,7 +166,10 @@ class OutputParser:
             try:
                 return int(text)
             except ValueError:
-                f = float(text)
+                try:
+                    f = float(text)
+                except ValueError:
+                    raise ControlError(f"cannot convert {text!r} to int")
                 if f != int(f):
                     raise ControlError(f"cannot losslessly convert {text!r} to int (field: {kind!r})")
                 return int(f)
