@@ -175,7 +175,7 @@ class WorkflowOrchestrator:
                 "errors": errors,
             }
 
-        except (ControlError, OSError, IOError) as exc:
+        except (ControlError, OSError) as exc:
             errors.append(str(exc))
             return {
                 "case_id": case_id,
