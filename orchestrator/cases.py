@@ -116,7 +116,6 @@ class CaseGenerator:
         for combo in product(*all_values):
             if case_id > self.config.execution.max_cases:
                 break
-            case_seed = self._master_rng.randrange(1 << 63)
             yield {
                 "case_id": case_id,
                 "seed": None,
