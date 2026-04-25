@@ -168,7 +168,7 @@ class OutputParser:
             except ValueError:
                 f = float(text)
                 if f != int(f):
-                    raise ControlError(f"cannot losslessly convert {text!r} to int")
+                    raise ControlError(f"cannot losslessly convert {text!r} to int (field: {kind!r})")
                 return int(f)
         if kind in {"float", "number", "double"}:
             try:
