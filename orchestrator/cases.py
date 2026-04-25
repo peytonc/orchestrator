@@ -97,7 +97,6 @@ class CaseGenerator:
         for value in self._sweep_values(var):
             if case_id > self.config.execution.max_cases:
                 break
-            case_seed = self._master_rng.randrange(1 << 63)
             yield {
                 "case_id": case_id,
                 "seed": case_seed,
