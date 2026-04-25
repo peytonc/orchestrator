@@ -20,10 +20,7 @@ class Renderer:
             raise TemplateError("missing values for placeholders: " + ", ".join(missing))
 
         def replacer(match: re.Match) -> str:
-            name = match.group(1)
-            if name in values:
-                return self._to_text(values[name])
-            return match.group(0)
+            return self._to_text(values[match.group(1)])
 
         return re.sub(r"\{\{([A-Z][A-Z0-9_]*)\}\}", replacer, self.template_text)
 
