@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 import json
+import threading
 
 
 class ResultCollector:
@@ -12,6 +13,7 @@ class ResultCollector:
 
     def __init__(self) -> None:
         self._records: List[Dict[str, Any]] = []
+        self._lock = threading.Lock()
 
     def add(
         self,
@@ -45,7 +47,8 @@ class ResultCollector:
             "warnings": warnings,
             "errors": errors,
         }
-        self._records.append(record)
+        with self._lock:
+            self._records.append(record)
 
     def extend(self, records: List[Dict[str, Any]]) -> None:
         self._records.extend(records)
