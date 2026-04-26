@@ -62,7 +62,7 @@ class SimulationRunner:
                 text=True,
                 shell=False,
                 timeout=self.timeout_seconds,
-        )
+            )
         except subprocess.TimeoutExpired as exc:
             stdout_path.write_text(exc.stdout or "", encoding="utf-8")
             stderr_path.write_text(exc.stderr or "", encoding="utf-8")
