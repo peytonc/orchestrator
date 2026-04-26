@@ -5,7 +5,6 @@ import re
 if TYPE_CHECKING:
     from .config import ControlConfig
 
-PLACEHOLDER_RE = re.compile(r"\{\{([A-Z][A-Z0-9_]*)\}\}")
 VALID_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]*\Z")
 
 
@@ -17,6 +16,8 @@ class TemplateLoader:
     """
     Reads the Physics template as plain text and extracts placeholder names.
     """
+
+    PLACEHOLDER_RE = re.compile(r"\{\{([A-Z][A-Z0-9_]*)\}\}")
 
     def __init__(self, template_path: str | Path):
         self.template_path = Path(template_path)
