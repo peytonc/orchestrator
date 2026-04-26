@@ -38,7 +38,7 @@ class TemplateLoader:
             placeholders.add(match.group(1))
 
         # Catch malformed placeholder-like text such as {{bad_name}} or {{NAME-1}}
-        malformed = re.findall(r"\{\{([^}]+)\}\}", text)
+        malformed = re.findall(r"\{\{([^}]*)\}\}", text)
         for token in malformed:
             if not VALID_NAME_RE.match(token):
                 raise TemplateError(
