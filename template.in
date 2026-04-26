@@ -1,0 +1,41 @@
+import sys
+import os
+import math
+
+# ── Parameters substituted by orchestrator ──────────────────────────────────
+MASS     = {{MASS}}
+SPRING_K = {{SPRING_K}}
+DAMPING  = {{DAMPING}}
+
+# ── Derive sibling output path from this script's own path ──────────────────
+_dir  = os.path.dirname(os.path.abspath(sys.argv[0]))
+_name = os.path.basename(sys.argv[0])
+_name = _name.replace("generated_input", "physics_output").replace(".in", ".txt")
+_out  = os.path.join(_dir, _name)
+
+# ── Physics: damped harmonic oscillator ─────────────────────────────────────
+omega_n = math.sqrt(SPRING_K / MASS)
+zeta    = DAMPING / (2.0 * math.sqrt(SPRING_K * MASS))
+
+if zeta < 1.0:
+    regime         = "underdamped"
+    is_underdamped = "true"
+elif abs(zeta - 1.0) < 1e-9:
+    regime         = "critically_damped"
+    is_underdamped = "false"
+else:
+    regime         = "overdamped"
+    is_underdamped = "false"
+
+omega_d     = omega_n * math.sqrt(max(0.0, 1.0 - zeta ** 2))
+omega_n_int = round(omega_n)
+
+# ── Write output ─────────────────────────────────────────────────────────────
+with open(_out, "w") as f:
+    f.write("RESULT SUMMARY\n")
+    f.write(f"Natural Frequency    = {omega_n:.6f} rad/s\n")
+    f.write(f"Natural Freq Rounded = {omega_n_int}\n")
+    f.write(f"Damping Ratio        = {zeta:.6f}\n")
+    f.write(f"Damped Frequency     = {omega_d:.6f} rad/s\n")
+    f.write(f"Regime               = {regime}\n")
+    f.write(f"Is Underdamped       = {is_underdamped}\n")
