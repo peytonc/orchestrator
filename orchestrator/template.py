@@ -1,12 +1,12 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, Set
+from typing import TYPE_CHECKING
 import re
 
 if TYPE_CHECKING:
     from .config import ControlConfig
 
 PLACEHOLDER_RE = re.compile(r"\{\{([A-Z][A-Z0-9_]*)\}\}")
-VALID_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
+VALID_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]*\Z")
 
 
 class TemplateError(ValueError):
@@ -21,7 +21,7 @@ class TemplateLoader:
     def __init__(self, template_path: str | Path):
         self.template_path = Path(template_path)
         self.text: str = ""
-        self.placeholders: Set[str] = set()
+        self.placeholders: set[str] = set()
 
     def load(self) -> "TemplateLoader":
         if not self.template_path.exists():
@@ -32,8 +32,8 @@ class TemplateLoader:
         return self
 
     @staticmethod
-    def extract_placeholders(text: str) -> Set[str]:
-        placeholders: Set[str] = set()
+    def extract_placeholders(text: str) -> set[str]:
+        placeholders: set[str] = set()
         for match in PLACEHOLDER_RE.finditer(text):
             placeholders.add(match.group(1))
 
