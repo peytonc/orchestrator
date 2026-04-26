@@ -76,7 +76,7 @@ class PathsConfig:
                 physics_command = [str(part) for part in raw_command]
             else:
                 raise ControlError("paths.physics_command must be a string or array")
-            if not physics_command or not physics_command[0]:
+            if not physics_command or any(not part for part in physics_command):
                 raise ControlError("paths.physics_command must not be empty")
             physics_output_file = Path(data["physics_output_file"])
             results_file = Path(data["results_file"])
@@ -158,8 +158,15 @@ class ControlConfig:
         if not isinstance(data, dict):
             raise ControlError("control file must decode to a JSON object")
 
-        execution = ExecutionConfig.from_dict(data.get("execution", {}))
-        paths = PathsConfig.from_dict(data.get("paths", {}))
+        execution_data = data.get("execution", {})
+        if not isinstance(execution_data, dict):
+            raise ControlError("execution must be a JSON object")
+        execution = ExecutionConfig.from_dict(execution_data)
+
+        paths_data = data.get("paths", {})
+        if not isinstance(paths_data, dict):
+            raise ControlError("paths must be a JSON object")
+        paths = PathsConfig.from_dict(paths_data)
 
         raw_variables = data.get("variables", [])
         if not isinstance(raw_variables, list) or not raw_variables:
@@ -189,7 +196,10 @@ class ControlConfig:
     @classmethod
     def load_json(cls, path: str | Path) -> "ControlConfig":
         raw = Path(path).read_text(encoding="utf-8")
-        data = json.loads(raw)
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise ControlError(f"control file is not valid JSON: {exc}") from exc
         return cls.from_dict(data)
 
     @property
