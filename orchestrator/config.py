@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Set
 import json
 import re
 from collections import Counter
@@ -73,7 +73,7 @@ class PathsConfig:
             if isinstance(raw_command, str):
                 physics_command = [raw_command.strip()]
             elif isinstance(raw_command, list):
-                physics_command = [str(part) for part in raw_command]
+                physics_command = [str(part).strip() for part in raw_command]
             else:
                 raise ControlError("paths.physics_command must be a string or array")
             if not physics_command or any(not part for part in physics_command):
