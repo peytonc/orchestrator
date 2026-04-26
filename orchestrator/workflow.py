@@ -59,6 +59,7 @@ class WorkflowOrchestrator:
 
     def run(self) -> List[Dict[str, Any]]:
         self._validate_template_and_config()
+        self.result_collector.clear()
 
         cases = self.case_generator.generate_cases()
         if not cases:
