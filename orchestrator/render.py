@@ -21,7 +21,7 @@ class Renderer:
         def replacer(match: re.Match) -> str:
             return self._to_text(values[match.group(1)])
 
-        return re.sub(r"\{\{([A-Z][A-Z0-9_]*)\}\}", replacer, self.template_text)
+        return re.sub(TemplateLoader.PLACEHOLDER_RE, replacer, self.template_text)
 
     @staticmethod
     def _to_text(value: Any) -> str:
