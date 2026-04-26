@@ -89,8 +89,11 @@ class OutputParser:
             raise ControlError("regex parsing rule requires 'start_pattern'")
 
         required = bool(spec.get("required", True))
-        context_before = int(spec.get("context_before", 0))
-        context_after = int(spec.get("context_after", 5))
+        try:
+            context_before = int(spec.get("context_before", 0))
+            context_after = int(spec.get("context_after", 5))
+        except (ValueError, TypeError) as exc:
+            raise ControlError(f"context_before/context_after must be integers") from exc
 
         try:
             start_re = re.compile(start_pattern)
@@ -146,7 +149,7 @@ class OutputParser:
                     break
 
             if value is None:
-                if bool(capture_spec.get("required", True)) if isinstance(capture_spec, dict) else required:
+                if bool(capture_spec.get("required", required)) if isinstance(capture_spec, dict) else required:
                     raise ControlError(f"required regex value not found for field {field_name!r}")
                 parsed[field_name] = None
             else:
