@@ -1,0 +1,75 @@
+{
+  "execution": {
+    "mode": "monte_carlo",
+    "max_cases": 500,
+    "random_seed": 42,
+    "max_cpu_threads": 4,
+    "prefer_physical_cores": true,
+    "worker_dir_root": "tmp",
+    "preserve_workdirs": false
+  },
+  "paths": {
+    "template_file": "templates/physics_template.in",
+    "generated_input_file": "generated_input.in",
+    "physics_command": ["python3"],
+    "physics_output_file": "physics_output.txt",
+    "results_file": "results/results.json"
+  },
+  "variables": [
+    {
+      "name": "MASS",
+      "kind": "distribution",
+      "distribution": "choice",
+      "values": [0.5, 1.0, 2.0, 5.0]
+    },
+    {
+      "name": "SPRING_K",
+      "kind": "distribution",
+      "distribution": "uniform",
+      "min": 10.0,
+      "max": 100.0
+    },
+    {
+      "name": "DAMPING",
+      "kind": "distribution",
+      "distribution": "truncated_normal",
+      "mean": 0.5,
+      "stddev": 0.2,
+      "min": 0.05,
+      "max": 1.5,
+      "max_tries": 5000
+    }
+  ],
+  "parsing": [
+    {
+      "name": "oscillator",
+      "type": "regex",
+      "start_pattern": "^RESULT SUMMARY$",
+      "context_before": 0,
+      "context_after": 6,
+      "required": true,
+      "captures": {
+        "natural_frequency": {
+          "pattern": "Natural Frequency\\s*=\\s*([0-9.eE+\\-]+)",
+          "type": "float"
+        },
+        "natural_freq_int": {
+          "pattern": "Natural Freq Rounded\\s*=\\s*([0-9]+)",
+          "type": "int"
+        },
+        "damping_ratio": {
+          "pattern": "Damping Ratio\\s*=\\s*([0-9.eE+\\-]+)",
+          "type": "float"
+        },
+        "regime": {
+          "pattern": "Regime\\s*=\\s*(\\S+)",
+          "type": "text"
+        },
+        "is_underdamped": {
+          "pattern": "Is Underdamped\\s*=\\s*(\\S+)",
+          "type": "bool"
+        }
+      }
+    }
+  }
+}
