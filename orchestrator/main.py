@@ -60,7 +60,7 @@ def _print_header(control_path: Path, config: ControlConfig) -> None:
     print(f"  Mode         : {config.execution.mode}")
     print(f"  Max cases    : {config.execution.max_cases}")
     print(f"  Random seed  : {config.execution.random_seed}")
-    print(f"  Max threads (requested) : {config.execution.max_cpu_threads}")
+    print(f"  Max threads  : {config.execution.max_cpu_threads}")
     print(f"  Template     : {config.paths.template_file}")
     print(f"  Results      : {config.paths.results_file}")
     print("=" * 60)
