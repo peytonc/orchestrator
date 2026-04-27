@@ -75,9 +75,10 @@ class DistributionSampler:
         if max_tries <= 0:
             raise ControlError(f"{name!r}: max_tries must be positive")
 
-        # Fail-fast validation before the loop
-        if low > mean + 4 * stddev or high < mean - 4 * stddev:
-             raise ControlError(f"{name!r}: bounds [{low}, {high}] are too far from mean {mean}. Rejection sampling is unviable.")
+        bulk_low = mean - 4 * stddev
+        bulk_high = mean + 4 * stddev
+        if low >= bulk_high or high <= bulk_low:
+            raise ControlError(f"{name!r}: bounds [{low}, {high}] are too far from mean {mean}. Rejection sampling is unviable.")
 
         for _ in range(max_tries):
             value = rng.gauss(mean, stddev)
