@@ -15,15 +15,9 @@ import time
 from pathlib import Path
 
 from orchestrator import (
-    CaseGenerator,
     ControlConfig,
     ControlError,
-    OutputParser,
-    Renderer,
-    ResultCollector,
-    SimulationRunner,
     TemplateError,
-    TemplateLoader,
     WorkflowOrchestrator,
 )
 
@@ -66,7 +60,7 @@ def _print_header(control_path: Path, config: ControlConfig) -> None:
     print(f"  Mode         : {config.execution.mode}")
     print(f"  Max cases    : {config.execution.max_cases}")
     print(f"  Random seed  : {config.execution.random_seed}")
-    print(f"  Max threads  : {config.execution.max_cpu_threads}")
+    print(f"  Max threads (requested) : {config.execution.max_cpu_threads}")
     print(f"  Template     : {config.paths.template_file}")
     print(f"  Results      : {config.paths.results_file}")
     print("=" * 60)
@@ -103,10 +97,8 @@ def _print_summary(records: list, elapsed: float) -> None:
 def main() -> int:
     parser = _build_arg_parser()
     args = parser.parse_args()
-
     control_path = Path(args.control_file)
 
-    # ── 1. Load config ────────────────────────────────────────────────────────
     try:
         config = ControlConfig.load_json(control_path)
     except FileNotFoundError:
@@ -116,44 +108,19 @@ def main() -> int:
         print(f"[error] invalid control file: {exc}", file=sys.stderr)
         return 1
 
-    _print_header(control_path, config)
-
-    # ── 2. Load and validate template ─────────────────────────────────────────
     try:
-        template_loader = TemplateLoader(config.paths.template_file).load()
-        template_loader.validate(config)
+        orchestrator = WorkflowOrchestrator.from_config(config, args.timeout)
     except (TemplateError, ControlError) as exc:
-        print(f"[error] template problem: {exc}", file=sys.stderr)
+        print(f"[error] {exc}", file=sys.stderr)
         return 1
 
-    print(f"  Template placeholders : {sorted(template_loader.placeholders)}")
+    _print_header(control_path, config)
+    print(f"  Template placeholders : {sorted(orchestrator.template_loader.placeholders)}")
 
-    # ── 3. Build all components ───────────────────────────────────────────────
-    renderer          = Renderer(template_loader.text)
-    case_generator    = CaseGenerator(config)
-    simulation_runner = SimulationRunner(
-        physics_command=config.paths.physics_command,
-        timeout_seconds=args.timeout,
-    )
-    output_parser    = OutputParser()
-    result_collector = ResultCollector()
-
-    # ── 4. Optional dry run ───────────────────────────────────────────────────
     if args.dry_run:
-        cases = case_generator.generate_cases()
+        cases = orchestrator.case_generator.generate_cases()
         print(f"\n  [dry-run] {len(cases)} case(s) would be generated. Exiting.")
         return 0
-
-    # ── 5. Run the pipeline ───────────────────────────────────────────────────
-    orchestrator = WorkflowOrchestrator(
-        config=config,
-        template_loader=template_loader,
-        renderer=renderer,
-        case_generator=case_generator,
-        simulation_runner=simulation_runner,
-        output_parser=output_parser,
-        result_collector=result_collector,
-    )
 
     print("\n  Starting simulation runs...\n")
     t0 = time.monotonic()
@@ -164,13 +131,8 @@ def main() -> int:
         print(f"\n[error] pipeline failed: {exc}", file=sys.stderr)
         return 1
 
-    elapsed = time.monotonic() - t0
-
-    # ── 6. Report ─────────────────────────────────────────────────────────────
-    _print_summary(records, elapsed)
-
-    failed_count = sum(1 for r in records if not r.get("success"))
-    return 1 if failed_count else 0
+    _print_summary(records, time.monotonic() - t0)
+    return 1 if any(not r.get("success") for r in records) else 0
 
 
 if __name__ == "__main__":
