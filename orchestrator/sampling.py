@@ -75,10 +75,17 @@ class DistributionSampler:
         if max_tries <= 0:
             raise ControlError(f"{name!r}: max_tries must be positive")
 
-        bulk_low = mean - 4 * stddev
-        bulk_high = mean + 4 * stddev
-        if low >= bulk_high or high <= bulk_low:
-            raise ControlError(f"{name!r}: bounds [{low}, {high}] are too far from mean {mean}. Rejection sampling is unviable.")
+        acceptance = (
+            DistributionSampler._normal_cdf(high, mean, stddev)
+            - DistributionSampler._normal_cdf(low, mean, stddev)
+        )
+        min_acceptance = 1.0 / max_tries
+        if acceptance < min_acceptance:
+            raise ControlError(
+                f"{name!r}: bounds [{low}, {high}] yield an acceptance probability of "
+                f"{acceptance:.2e} (< 1/max_tries = {min_acceptance:.2e}); "
+                "rejection sampling is unviable. Widen bounds or increase max_tries."
+            )
 
         for _ in range(max_tries):
             value = rng.gauss(mean, stddev)
