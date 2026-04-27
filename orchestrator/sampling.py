@@ -99,6 +99,10 @@ class DistributionSampler:
         raise ControlError(f"{name!r}: failed to sample truncated normal inside bounds after {max_tries} tries")
 
     @staticmethod
+    def _normal_cdf(x: float, mean: float, stddev: float) -> float:
+        return 0.5 * math.erfc(-(x - mean) / (stddev * math.sqrt(2)))
+
+    @staticmethod
     def _require_number(spec: Dict[str, Any], key: str, name: str) -> float:
         if key not in spec:
             raise ControlError(f"{name!r}: missing required field {key!r}")
