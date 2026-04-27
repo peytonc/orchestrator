@@ -140,8 +140,9 @@ class WorkflowOrchestrator:
                 future = executor.submit(self._run_single_case, case, renderer)
                 in_flight[future] = None
 
+            completion_stream = as_completed(in_flight)
             while in_flight:
-                done_future = next(as_completed(in_flight))
+                done_future = next(completion_stream)
                 del in_flight[done_future]
 
                 record = done_future.result()
@@ -151,6 +152,7 @@ class WorkflowOrchestrator:
                 if next_case is not None:
                     next_future = executor.submit(self._run_single_case, next_case, renderer)
                     in_flight[next_future] = None
+                    completion_stream = as_completed(in_flight)
 
     def _run_single_case(self, case: Dict[str, Any], renderer: Renderer) -> Dict[str, Any]:
         worker_id = self._acquire_worker_id()
