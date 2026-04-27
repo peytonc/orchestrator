@@ -35,7 +35,7 @@ class TemplateLoader:
     @staticmethod
     def extract_placeholders(text: str) -> set[str]:
         placeholders: set[str] = set()
-        for match in PLACEHOLDER_RE.finditer(text):
+        for match in TemplateLoader.PLACEHOLDER_RE.finditer(text):
             placeholders.add(match.group(1))
 
         # Catch malformed placeholder-like text such as {{bad_name}} or {{NAME-1}}
