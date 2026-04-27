@@ -81,14 +81,11 @@ class DistributionSampler:
             DistributionSampler._normal_cdf(high, mean, stddev)
             - DistributionSampler._normal_cdf(low, mean, stddev)
         )
-        log_failure = max_tries * math.log1p(-acceptance)
-        failure_prob = math.exp(log_failure)
-        max_failure_prob = 1e-6
-        if failure_prob > max_failure_prob:
+        min_acceptance = 0.01
+        if acceptance < min_acceptance:
             raise ControlError(
-                f"{name!r}: bounds [{low}, {high}] yield a loop-exhaustion probability of "
-                f"{failure_prob:.2e} (> {max_failure_prob:.2e}); "
-                "rejection sampling is unviable. Widen bounds or increase max_tries."
+                f"{name!r}: bounds [{low}, {high}] only cover {acceptance:.2%} of the "
+                f"distribution; rejection sampling is unviable. Widen bounds."
             )
 
         for _ in range(max_tries):
