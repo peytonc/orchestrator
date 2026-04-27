@@ -5,6 +5,8 @@ from typing import Any, Dict
 
 from .config import ControlError, VariableSpec
 
+import math
+
 
 class DistributionSampler:
     """
@@ -79,11 +81,13 @@ class DistributionSampler:
             DistributionSampler._normal_cdf(high, mean, stddev)
             - DistributionSampler._normal_cdf(low, mean, stddev)
         )
-        min_acceptance = 1.0 / max_tries
-        if acceptance < min_acceptance:
+        log_failure = max_tries * math.log1p(-acceptance)
+        failure_prob = math.exp(log_failure)
+        max_failure_prob = 1e-6
+        if failure_prob > max_failure_prob:
             raise ControlError(
-                f"{name!r}: bounds [{low}, {high}] yield an acceptance probability of "
-                f"{acceptance:.2e} (< 1/max_tries = {min_acceptance:.2e}); "
+                f"{name!r}: bounds [{low}, {high}] yield a loop-exhaustion probability of "
+                f"{failure_prob:.2e} (> {max_failure_prob:.2e}); "
                 "rejection sampling is unviable. Widen bounds or increase max_tries."
             )
 
