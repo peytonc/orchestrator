@@ -145,7 +145,14 @@ class WorkflowOrchestrator:
                 done_future = next(completion_stream)
                 del in_flight[done_future]
 
-                record = done_future.result()
+                try:
+                    record = done_future.result()
+                except Exception as exc:
+                    record = {
+                        "case_id": -1, "worker_id": -1, "worker_dir": "", "input_path": "",
+                        "output_path": "", "return_code": -1, "stdout_path": "", "stderr_path": "",
+                        "parsed": {}, "warnings": [], "errors": [f"Unhandled worker exception: {exc}"],
+                    }
                 self.result_collector.add(**record)
 
                 next_case = next(case_iter, None)
