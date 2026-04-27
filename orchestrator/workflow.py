@@ -57,8 +57,36 @@ class WorkflowOrchestrator:
 
         self._slot_queue: Queue[int] = Queue()
 
+    @classmethod
+    def from_config(
+        cls,
+        config: ControlConfig,
+        timeout_seconds: float | None = None,
+    ) -> "WorkflowOrchestrator":
+        template_loader = TemplateLoader(config.paths.template_file).load()
+        if not template_loader.text:
+            raise ControlError("template file is empty")
+        config.validate_against_template(template_loader.placeholders)
+
+        return cls(
+            config=config,
+            template_loader=template_loader,
+            renderer=Renderer(template_loader.text),
+            case_generator=CaseGenerator(config),
+            simulation_runner=SimulationRunner(
+                physics_command=config.paths.physics_command,
+                timeout_seconds=timeout_seconds,
+            ),
+            output_parser=OutputParser(),
+            result_collector=ResultCollector(),
+        )
+
     def run(self) -> List[Dict[str, Any]]:
-        self._validate_template_and_config()
+        if not self.template_loader.text:
+            raise ControlError(
+                "template not loaded; use WorkflowOrchestrator.from_config "
+                "or call template_loader.load() before run()"
+            )
         self.result_collector.clear()
 
         cases = self.case_generator.generate_cases()
@@ -94,14 +122,6 @@ class WorkflowOrchestrator:
             self._cleanup_worker_dirs(worker_count)
 
         return records
-
-    def _validate_template_and_config(self) -> None:
-        if not self.template_loader.placeholders and not self.template_loader.text:
-            self.template_loader.load()
-        if not self.template_loader.text:
-            raise ControlError("template file is empty")
-        template_placeholders = set(self.template_loader.placeholders)
-        self.config.validate_against_template(template_placeholders)
 
     def _run_single_case(self, case: Dict[str, Any]) -> Dict[str, Any]:
         worker_id = self._acquire_worker_id()
