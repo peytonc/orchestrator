@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+from itertools import chain
 from pathlib import Path
 from queue import Queue
-from typing import Any, Dict, List
+from typing import Any, Dict, Iterator, List
 import shutil
 
 from .cases import CaseGenerator
@@ -41,7 +42,6 @@ class WorkflowOrchestrator:
         self,
         config: ControlConfig,
         template_loader: TemplateLoader,
-        renderer: Renderer,
         case_generator: CaseGenerator,
         simulation_runner: SimulationRunner,
         output_parser: OutputParser,
@@ -49,7 +49,6 @@ class WorkflowOrchestrator:
     ) -> None:
         self.config = config
         self.template_loader = template_loader
-        self.renderer = renderer
         self.case_generator = case_generator
         self.simulation_runner = simulation_runner
         self.output_parser = output_parser
@@ -71,7 +70,6 @@ class WorkflowOrchestrator:
         return cls(
             config=config,
             template_loader=template_loader,
-            renderer=Renderer(template_loader.text),
             case_generator=CaseGenerator(config),
             simulation_runner=SimulationRunner(
                 physics_command=config.paths.physics_command,
@@ -87,31 +85,26 @@ class WorkflowOrchestrator:
                 "template not loaded; use WorkflowOrchestrator.from_config "
                 "or call template_loader.load() before run()"
             )
+
+        renderer = Renderer(self.template_loader.text)
         self.result_collector.clear()
 
-        cases = self.case_generator.generate_cases()
-        if not cases:
+        case_iter = self.case_generator.iter_cases()
+        first_case = next(case_iter, None)
+        if first_case is None:
             raise ControlError("no cases were generated")
+        case_iter = chain([first_case], case_iter)
 
         worker_count = SystemResourceDetector.recommended_worker_count(
             requested=self.config.execution.max_cpu_threads,
-            case_count=len(cases),
+            case_count=self.config.execution.max_cases,
             prefer_physical_cores=self.config.execution.prefer_physical_cores,
         )
 
-        self._slot_queue = Queue()
-        for worker_id in range(1, worker_count + 1):
-            self._slot_queue.put(worker_id)
-
-        with ThreadPoolExecutor(max_workers=worker_count) as executor:
-            futures = [
-                executor.submit(self._run_single_case, case)
-                for case in cases
-            ]
-
-            for future in as_completed(futures):
-                record = future.result()
-                self.result_collector.add(**record)
+        if worker_count <= 1:
+            self._run_serial(case_iter=case_iter, renderer=renderer)
+        else:
+            self._run_parallel(case_iter=case_iter, worker_count=worker_count, renderer=renderer)
 
         records = self.result_collector.to_list()
         records.sort(key=lambda item: item["case_id"])
@@ -123,10 +116,46 @@ class WorkflowOrchestrator:
 
         return records
 
-    def _run_single_case(self, case: Dict[str, Any]) -> Dict[str, Any]:
+    def _run_serial(self, case_iter: Iterator[Dict[str, Any]], renderer: Renderer) -> None:
+        for case in case_iter:
+            record = self._execute_case_in_worker_slot(case, worker_id=1, renderer=renderer)
+            self.result_collector.add(**record)
+
+    def _run_parallel(
+        self,
+        case_iter: Iterator[Dict[str, Any]],
+        worker_count: int,
+        renderer: Renderer,
+    ) -> None:
+        self._slot_queue = Queue()
+        for worker_id in range(1, worker_count + 1):
+            self._slot_queue.put(worker_id)
+
+        in_flight: dict[Any, None] = {}
+        with ThreadPoolExecutor(max_workers=worker_count) as executor:
+            for _ in range(worker_count):
+                case = next(case_iter, None)
+                if case is None:
+                    break
+                future = executor.submit(self._run_single_case, case, renderer)
+                in_flight[future] = None
+
+            while in_flight:
+                done_future = next(as_completed(in_flight))
+                del in_flight[done_future]
+
+                record = done_future.result()
+                self.result_collector.add(**record)
+
+                next_case = next(case_iter, None)
+                if next_case is not None:
+                    next_future = executor.submit(self._run_single_case, next_case, renderer)
+                    in_flight[next_future] = None
+
+    def _run_single_case(self, case: Dict[str, Any], renderer: Renderer) -> Dict[str, Any]:
         worker_id = self._acquire_worker_id()
         try:
-            return self._execute_case_in_worker_slot(case, worker_id)
+            return self._execute_case_in_worker_slot(case, worker_id, renderer)
         finally:
             self._slot_queue.put(worker_id)
 
@@ -137,6 +166,7 @@ class WorkflowOrchestrator:
         self,
         case: Dict[str, Any],
         worker_id: int,
+        renderer: Renderer,
     ) -> Dict[str, Any]:
         case_id = int(case["case_id"])
         worker_paths = self._build_worker_paths(worker_id=worker_id, case_id=case_id)
@@ -148,7 +178,7 @@ class WorkflowOrchestrator:
             worker_paths.worker_dir.mkdir(parents=True, exist_ok=True)
             runtime_values = dict(case["values"])
 
-            rendered_input = self.renderer.render(runtime_values)
+            rendered_input = renderer.render(runtime_values)
             worker_paths.input_path.write_text(rendered_input, encoding="utf-8")
 
             run_info = self.simulation_runner.run(
