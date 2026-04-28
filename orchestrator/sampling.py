@@ -7,6 +7,7 @@ from typing import Any, Dict
 from .config import ControlError, VariableSpec
 
 import math
+import statistics
 
 
 class DistributionSampler:
@@ -30,9 +31,10 @@ class DistributionSampler:
         spec = var.data
         if not isinstance(spec, dict):
             raise ControlError(f"variable {var.name!r} data must be a dictionary configuration")
-        dist = str(spec.get("distribution", "")).strip().lower()
-        if not dist:
+        dist_val = spec.get("distribution")
+        if not dist_val:
             raise ControlError(f"distribution variable {var.name!r} is missing 'distribution'")
+        dist = str(dist_val).strip().lower()
 
         if dist == "uniform":
             return self._sample_uniform(var.name, spec, rng)
@@ -45,12 +47,29 @@ class DistributionSampler:
 
         raise ControlError(f"variable {var.name!r} has unsupported distribution {dist!r}")
 
-    def _sample_uniform(self, name: str, spec: Dict[str, Any], rng: Random) -> float:
+    def _sample_truncated_normal(self, name: str, spec: Dict[str, Any], rng: Random) -> float:
+        mean = self._require_number(spec, "mean", name)
+        stddev = self._require_number(spec, "stddev", name)
+        if stddev <= 0:
+            raise ControlError(f"{name!r}: stddev must be > 0")
+
         low = self._require_number(spec, "min", name)
         high = self._require_number(spec, "max", name)
         if high < low:
             raise ControlError(f"{name!r}: max must be >= min")
-        return rng.uniform(low, high)
+        if low == high:
+            return low
+
+        dist = statistics.NormalDist(mu=mean, sigma=stddev)
+        p_low = dist.cdf(low)
+        p_high = dist.cdf(high)
+        if p_low == p_high:
+             raise ControlError(
+                 f"{name!r}: bounds [{low}, {high}] are too far in the distribution tail. "
+                 f"The acceptance area is indistinguishable from 0% due to float precision."
+             )
+        u = rng.uniform(p_low, p_high)
+        return dist.inv_cdf(u)
 
     def _sample_normal(self, name: str, spec: Dict[str, Any], rng: Random) -> float:
         mean = self._require_number(spec, "mean", name)
