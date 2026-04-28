@@ -58,12 +58,12 @@ class DistributionSampler:
         return rng.gauss(mean, stddev)
 
     def _sample_choice(self, name: str, spec: Dict[str, Any], rng: Random) -> Any:
-    values = spec.get("values")
-    if not isinstance(values, Sequence) or isinstance(values, (str, bytes)) or not values:
-        raise ControlError(
-            f"{name!r}: choice distribution requires a non-empty sequence of values"
-        )
-    return rng.choice(values)
+        values = spec.get("values")
+        if not isinstance(values, Sequence) or isinstance(values, (str, bytes)) or not values:
+            raise ControlError(
+                f"{name!r}: choice distribution requires a non-empty sequence of values"
+            )
+        return rng.choice(values)
 
     def _sample_truncated_normal(self, name: str, spec: Dict[str, Any], rng: Random) -> float:
         mean = self._require_number(spec, "mean", name)
