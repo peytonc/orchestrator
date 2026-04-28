@@ -28,6 +28,8 @@ class DistributionSampler:
             raise ControlError(f"variable {var.name!r} is not a distribution variable")
 
         spec = var.data
+        if not isinstance(spec, dict):
+            raise ControlError(f"variable {var.name!r} data must be a dictionary configuration")
         dist = str(spec.get("distribution", "")).strip().lower()
         if not dist:
             raise ControlError(f"distribution variable {var.name!r} is missing 'distribution'")
@@ -85,10 +87,7 @@ class DistributionSampler:
         if max_tries <= 0:
             raise ControlError(f"{name!r}: max_tries must be positive")
 
-        acceptance = (
-            DistributionSampler._normal_cdf(high, mean, stddev)
-            - DistributionSampler._normal_cdf(low, mean, stddev)
-        )
+        acceptance = (self._normal_cdf(high, mean, stddev) - self._normal_cdf(low, mean, stddev))
         min_acceptance = 0.01
         if acceptance < min_acceptance:
             raise ControlError(
