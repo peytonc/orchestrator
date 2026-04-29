@@ -146,39 +146,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-    except ControlError as exc:
-        print(f"[error] invalid control file: {exc}", file=sys.stderr)
-        return 1
-
-    try:
-        orchestrator = WorkflowOrchestrator.from_config(config, args.timeout)
-    except (TemplateError, ControlError) as exc:
-        print(f"[error] {exc}", file=sys.stderr)
-        return 1
-
-    _print_header(control_path, config)
-    print(f"  Template placeholders : {sorted(orchestrator.template_loader.placeholders)}")
-
-    if args.dry_run:
-        cases = orchestrator.case_generator.generate_cases()
-        print(f"\n  [dry-run] {len(cases)} case(s) would be generated. Exiting.")
-        return 0
-
-    print("\n  Starting simulation runs...\n")
-    t0 = time.monotonic()
-
-    try:
-        records = orchestrator.run()
-    except ControlError as exc:
-        print(f"\n[error] pipeline failed: {exc}", file=sys.stderr)
-        return 1
-    except KeyboardInterrupt:
-        print("\n[warning] simulation interrupted by user.", file=sys.stderr)
-        return 130
-
-    _print_summary(records, time.monotonic() - t0)
-    return 1 if any(not r.get("success") for r in records) else 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
