@@ -86,41 +86,6 @@ class DistributionSampler:
             )
         return rng.choice(values)
 
-    def _sample_truncated_normal(self, name: str, spec: Dict[str, Any], rng: Random) -> float:
-        mean = self._require_number(spec, "mean", name)
-        stddev = self._require_number(spec, "stddev", name)
-        if stddev <= 0:
-            raise ControlError(f"{name!r}: stddev must be > 0")
-
-        low = self._require_number(spec, "min", name)
-        high = self._require_number(spec, "max", name)
-        if high < low:
-            raise ControlError(f"{name!r}: max must be >= min")
-        if low == high:
-            return low
-
-        try:
-            max_tries = int(spec.get("max_tries", 10000))
-        except (TypeError, ValueError) as exc:
-            raise ControlError(f"{name!r}: max_tries must be an integer") from exc
-        if max_tries <= 0:
-            raise ControlError(f"{name!r}: max_tries must be positive")
-
-        acceptance = (self._normal_cdf(high, mean, stddev) - self._normal_cdf(low, mean, stddev))
-        min_acceptance = 0.01
-        if acceptance < min_acceptance:
-            raise ControlError(
-                f"{name!r}: bounds [{low}, {high}] only cover {acceptance:.2%} of the "
-                f"distribution; rejection sampling is unviable. Widen bounds."
-            )
-
-        for _ in range(max_tries):
-            value = rng.gauss(mean, stddev)
-            if low <= value <= high:
-                return value
-        
-        raise ControlError(f"{name!r}: failed to sample truncated normal inside bounds after {max_tries} tries")
-
     @staticmethod
     def _normal_cdf(x: float, mean: float, stddev: float) -> float:
         return 0.5 * math.erfc(-(x - mean) / (stddev * math.sqrt(2)))
