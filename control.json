@@ -9,7 +9,7 @@
     "preserve_workdirs": false
   },
   "paths": {
-    "template_file": "templates/physics_template.in",
+    "template_file": "template.in",
     "generated_input_file": "generated_input.in",
     "physics_command": ["python3"],
     "physics_output_file": "physics_output.txt",
