@@ -86,8 +86,9 @@ def _print_summary(records: list, elapsed: float) -> None:
         for r in records:
             if not r.get("success"):
                 errs = r.get("errors") or []
-                short = errs[0][:80] if errs else "unknown error"
-                print(f"    case {r['case_id']:>5d}  {short}")
+                short = str(errs[0])[:80] if errs else "unknown error"
+                case_id = r.get("case_id", "N/A")
+                print(f"    case {case_id:>5}  {short}")
 
     print("=" * 60)
 
@@ -130,6 +131,9 @@ def main() -> int:
     except ControlError as exc:
         print(f"\n[error] pipeline failed: {exc}", file=sys.stderr)
         return 1
+    except KeyboardInterrupt:
+        print("\n[warning] simulation interrupted by user.", file=sys.stderr)
+        return 130
 
     _print_summary(records, time.monotonic() - t0)
     return 1 if any(not r.get("success") for r in records) else 0
