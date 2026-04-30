@@ -1,13 +1,10 @@
-from __future__ import annotations
-
-from collections.abc import Sequence
-from random import Random
-from typing import Any, Dict
-
-from .config import ControlError, VariableSpec
-
 import math
 import statistics
+from collections.abc import Sequence
+from random import Random
+from typing import Any
+
+from .config import ControlError, VariableSpec
 
 
 class DistributionSampler:
@@ -28,9 +25,9 @@ class DistributionSampler:
         spec = var.data
         if not isinstance(spec, dict):
             raise ControlError(f"variable {var.name!r} data must be a dictionary configuration")
-        dist_val = spec.get("distribution")
-        if not dist_val:
+        if "distribution" not in spec:
             raise ControlError(f"distribution variable {var.name!r} is missing 'distribution'")
+        dist_val = spec["distribution"]
         dist = str(dist_val).strip().lower()
 
         if dist == "uniform":
@@ -44,7 +41,7 @@ class DistributionSampler:
 
         raise ControlError(f"variable {var.name!r} has unsupported distribution {dist!r}")
 
-    def _sample_uniform(self, name: str, spec: Dict[str, Any], rng: Random) -> float:
+    def _sample_uniform(self, name: str, spec: dict[str, Any], rng: Random) -> float:
         low = self._require_number(spec, "min", name)
         high = self._require_number(spec, "max", name)
         
@@ -53,7 +50,7 @@ class DistributionSampler:
             
         return rng.uniform(low, high)
     
-    def _sample_truncated_normal(self, name: str, spec: Dict[str, Any], rng: Random) -> float:
+    def _sample_truncated_normal(self, name: str, spec: dict[str, Any], rng: Random) -> float:
         mean = self._require_number(spec, "mean", name)
         stddev = self._require_number(spec, "stddev", name)
         if stddev <= 0:
@@ -78,16 +75,16 @@ class DistributionSampler:
         safe_low = math.nextafter(0.0, 1.0)
         safe_high = math.nextafter(1.0, 0.0)
         u = max(safe_low, min(u, safe_high))
-        return dist.inv_cdf(u)
+        return max(low, min(dist.inv_cdf(u), high))
 
-    def _sample_normal(self, name: str, spec: Dict[str, Any], rng: Random) -> float:
+    def _sample_normal(self, name: str, spec: dict[str, Any], rng: Random) -> float:
         mean = self._require_number(spec, "mean", name)
         stddev = self._require_number(spec, "stddev", name)
         if stddev <= 0:
             raise ControlError(f"{name!r}: stddev must be > 0")
         return rng.gauss(mean, stddev)
 
-    def _sample_choice(self, name: str, spec: Dict[str, Any], rng: Random) -> Any:
+    def _sample_choice(self, name: str, spec: dict[str, Any], rng: Random) -> Any:
         values = spec.get("values")
         if not isinstance(values, Sequence) or isinstance(values, (str, bytes)) or not values:
             raise ControlError(
@@ -96,7 +93,7 @@ class DistributionSampler:
         return rng.choice(values)
 
     @staticmethod
-    def _require_number(spec: Dict[str, Any], key: str, name: str) -> float:
+    def _require_number(spec: dict[str, Any], key: str, name: str) -> float:
         if key not in spec:
             raise ControlError(f"{name!r}: missing required field {key!r}")
         try:
