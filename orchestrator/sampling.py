@@ -20,10 +20,7 @@ class DistributionSampler:
       - choice
       - truncated_normal
     """
-
-    def __init__(self) -> None:
-        pass
-
+    
     def sample(self, var: VariableSpec, rng: Random) -> Any:
         if var.kind != "distribution":
             raise ControlError(f"variable {var.name!r} is not a distribution variable")
@@ -47,6 +44,15 @@ class DistributionSampler:
 
         raise ControlError(f"variable {var.name!r} has unsupported distribution {dist!r}")
 
+    def _sample_uniform(self, name: str, spec: Dict[str, Any], rng: Random) -> float:
+        low = self._require_number(spec, "min", name)
+        high = self._require_number(spec, "max", name)
+        
+        if high < low:
+            raise ControlError(f"{name!r}: max must be >= min")
+            
+        return rng.uniform(low, high)
+    
     def _sample_truncated_normal(self, name: str, spec: Dict[str, Any], rng: Random) -> float:
         mean = self._require_number(spec, "mean", name)
         stddev = self._require_number(spec, "stddev", name)
@@ -69,6 +75,9 @@ class DistributionSampler:
                  f"The acceptance area is indistinguishable from 0% due to float precision."
              )
         u = rng.uniform(p_low, p_high)
+        safe_low = math.nextafter(0.0, 1.0)
+        safe_high = math.nextafter(1.0, 0.0)
+        u = max(safe_low, min(u, safe_high))
         return dist.inv_cdf(u)
 
     def _sample_normal(self, name: str, spec: Dict[str, Any], rng: Random) -> float:
@@ -87,14 +96,13 @@ class DistributionSampler:
         return rng.choice(values)
 
     @staticmethod
-    def _normal_cdf(x: float, mean: float, stddev: float) -> float:
-        return 0.5 * math.erfc(-(x - mean) / (stddev * math.sqrt(2)))
-
-    @staticmethod
     def _require_number(spec: Dict[str, Any], key: str, name: str) -> float:
         if key not in spec:
             raise ControlError(f"{name!r}: missing required field {key!r}")
         try:
-            return float(spec[key])
+            val = float(spec[key])
+            if not math.isfinite(val):
+                raise ControlError(f"{name!r}: field {key!r} must be a finite number")
+            return val
         except (TypeError, ValueError) as exc:
             raise ControlError(f"{name!r}: field {key!r} must be numeric") from exc
