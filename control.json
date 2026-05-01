@@ -9,11 +9,11 @@
     "preserve_workdirs": false
   },
   "paths": {
-    "template_file": "template.in",
-    "generated_input_file": "generated_input.in",
+    "template_file": "template.txt",
+    "generated_input_file": "input.txt",
     "physics_command": ["python3"],
-    "physics_output_file": "physics_output.txt",
-    "results_file": "results/results.json"
+    "physics_output_file": "output.txt",
+    "results_file": "result.json"
   },
   "variables": [
     {
