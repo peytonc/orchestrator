@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import math
 from decimal import Decimal
 from itertools import product
-import math
 from random import Random
 from typing import Any, Dict, Iterator, List
 
@@ -52,11 +52,10 @@ class CaseGenerator:
         mode = self.config.execution.mode
         if mode == "monte_carlo":
             yield from self._iter_monte_carlo_cases()
-            return
-        if mode == "sweep":
+        elif mode == "sweep":
             yield from self._iter_sweep_cases()
-            return
-        raise ControlError(f"unsupported execution mode: {mode!r}")
+        else:
+            raise ControlError(f"unsupported execution mode: {mode!r}")
 
     def generate_cases(self) -> List[Dict[str, Any]]:
         return list(self.iter_cases())
@@ -86,34 +85,9 @@ class CaseGenerator:
         if not sweep_vars:
             raise ControlError("sweep mode requires at least one sweep variable")
 
-        if len(sweep_vars) == 1:
-            yield from self._iter_single_sweep(sweep_vars[0])
-        else:
-            yield from self._iter_nested_sweep(sweep_vars)
-
-    def _iter_single_sweep(self, var: VariableSpec) -> Iterator[Dict[str, Any]]:
-        """Iterates through every value of one sweep variable."""
-        case_id = 1
-        for value in self._sweep_values(var):
-            if case_id > self.config.execution.max_cases:
-                break
-            yield {
-                "case_id": case_id,
-                "seed": None,
-                "mode": "sweep",
-                "values": {var.name: value},
-            }
-            case_id += 1
-
-    def _iter_nested_sweep(self, sweep_vars: List[VariableSpec]) -> Iterator[Dict[str, Any]]:
-        """
-        Nested for-loop iteration (Cartesian product).
-        The first variable in the array is the outermost loop;
-        the last variable is the innermost loop.
-        """
         all_values = [self._sweep_values(var) for var in sweep_vars]
-        case_id = 1
-        for combo in product(*all_values):
+        
+        for case_id, combo in enumerate(product(*all_values), start=1):
             if case_id > self.config.execution.max_cases:
                 break
             yield {
@@ -122,7 +96,6 @@ class CaseGenerator:
                 "mode": "sweep",
                 "values": {var.name: val for var, val in zip(sweep_vars, combo)},
             }
-            case_id += 1
 
     def _sweep_values(self, var: VariableSpec) -> List[Any]:
         spec = var.data
