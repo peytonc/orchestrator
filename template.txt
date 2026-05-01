@@ -10,7 +10,7 @@ DAMPING  = {{DAMPING}}
 # ── Derive sibling output path from this script's own path ──────────────────
 _dir  = os.path.dirname(os.path.abspath(sys.argv[0]))
 _name = os.path.basename(sys.argv[0])
-_name = _name.replace("generated_input", "physics_output").replace(".in", ".txt")
+_name = _name.replace("input", "output").replace(".txt", ".txt")
 _out  = os.path.join(_dir, _name)
 
 # ── Physics: damped harmonic oscillator ─────────────────────────────────────
