@@ -167,6 +167,6 @@ class CaseGenerator:
             try:
                 num = float(value)
                 return math.isfinite(num) and num.is_integer()
-            except ValueError:
+            except (ValueError, OverflowError):
                 return False
         return False
