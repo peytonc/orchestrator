@@ -156,22 +156,20 @@ A typical run may create files like this:
 ```text
 project/
 ├── control.json
-├── physics_template.in
-├── physics_case.in
+├── template.txt
+├── results.json
 ├── tmp/
-│   ├── thread_01/
-│   │   ├── input_case_00001.in
-│   │   ├── output_case_00001.txt
-│   │   ├── case_00001.stdout.log
-│   │   └── case_00001.stderr.log
-│   ├── thread_02/
-│   │   ├── input_case_00002.in
-│   │   ├── output_case_00002.txt
-│   │   ├── case_00002.stdout.log
-│   │   └── case_00002.stderr.log
-│   └── ...
-└── results/
-    └── results.json
+    ├── thread_01/
+    │   ├── input_case_00001.txt
+    │   ├── output_case_00001.txt
+    │   ├── case_00001.stdout.log
+    │   └── case_00001.stderr.log
+    ├── thread_02/
+    │   ├── input_case_00002.txt
+    │   ├── output_case_00002.txt
+    │   ├── case_00002.stdout.log
+    │   └── case_00002.stderr.log
+    └── ...
 ```
 
 ## Components
@@ -214,9 +212,7 @@ Substitutes case values into the template. Responsibilities:
 
 ### `SimulationRunner`
 
-Runs the Physics executable.
-
-Responsibilities:
+Runs the Physics executable. Responsibilities:
 
 - launch the command locally
 - capture stdout and stderr
@@ -225,9 +221,7 @@ Responsibilities:
 
 ### `OutputParser`
 
-Parses the output file.
-
-Responsibilities:
+Parses the output file. Responsibilities:
 
 - parse CSV files with headers
 - parse text output with regex rules
@@ -236,9 +230,7 @@ Responsibilities:
 
 ### `ResultCollector`
 
-Stores the final results.
-
-Responsibilities:
+Stores the final results. Responsibilities:
 
 - collect per-case records
 - store parsed values
@@ -247,9 +239,7 @@ Responsibilities:
 
 ### `WorkflowOrchestrator`
 
-Coordinates the full pipeline.
-
-Responsibilities:
+Coordinates the full pipeline. Responsibilities:
 
 - load and validate the config
 - validate template placeholders
@@ -319,11 +309,11 @@ This approach is intentionally simple and works well for text logs and summary b
     "preserve_workdirs": true
   },
   "paths": {
-    "template_file": "templates/physics_template.in",
-    "generated_input_file": "generated/physics_case.in",
+    "template_file": "template.txt",
+    "generated_input_file": "physics_input.txt",
     "physics_command": "physics.exe",
     "physics_output_file": "physics_output.txt",
-    "results_file": "results/monte_carlo_results.json"
+    "results_file": "results.json"
   },
   "variables": [
     {
@@ -388,11 +378,11 @@ end
     "preserve_workdirs": true
   },
   "paths": {
-    "template_file": "templates/physics_template.in",
-    "generated_input_file": "generated/physics_case.in",
+    "template_file": "template.txt",
+    "generated_input_file": "physics_input.txt",
     "physics_command": "physics.exe",
     "physics_output_file": "physics_output.txt",
-    "results_file": "results/sweep_results.json"
+    "results_file": "results.json"
   },
   "variables": [
     {
