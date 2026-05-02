@@ -6,7 +6,7 @@ It is a local-only Python framework for driving a black-box Physics executable u
 
 ## Overview
 
-`orchestrator` provides an end-to-end batch execution pipeline for simulations that behave like a black box.
+`orchestrator` provides an end-to-end batch execution pipeline for simulations that behave like a black box. The framework supports Monte Carlo sampling and deterministic numerical sweeps. It also supports parallel execution with worker threads, per-worker local directories, reproducible random seeds, CSV parsing, and regex-based output extraction.
 
 It handles the full workflow:
 
@@ -21,18 +21,9 @@ It handles the full workflow:
 9. collect results
 10. write an aggregated results file
 
-The framework supports both:
-
-- Monte Carlo sampling
-- deterministic numerical sweeps
-
-It also supports parallel execution with worker threads, per-worker local directories, reproducible random seeds, CSV parsing, and regex-based output extraction.
-
 ## Design goals
 
-This project is intentionally simple and opinionated.
-
-The main goals are:
+This project is intentionally simple and opinionated. The main goals are:
 
 - use only the Python standard library
 - support offline execution
@@ -67,13 +58,9 @@ Before any simulation begins, the framework validates that:
 - placeholder syntax is valid
 - the template contains no malformed placeholder tokens
 
-This fail-fast behavior prevents wasted simulation time.
-
 ## Control file
 
-The control file is JSON.
-
-It is designed to be easy to parse with `json` and `dataclasses`, and it should remain clean and explicit.
+The control file is JSON. It is designed to be easy to parse with `json` and `dataclasses`, and it should remain clean and explicit.
 
 ### `execution`
 
@@ -99,45 +86,33 @@ Contains file and command locations:
 
 ### `variables`
 
-Defines the simulation variables.
-
-Each variable includes:
+Defines the simulation variables. Each variable includes:
 
 - `name`
 - `kind`
-- distribution or sweep settings
 
 ### `parsing`
 
-Defines how to extract values from output files.
-
-Each rule includes:
+Defines how to extract values from output files. Each rule includes:
 
 - `name`
 - `type`
 - `target_file`
-- extraction details
 
 ## Execution modes
 
 ### Monte Carlo
 
-Monte Carlo mode generates many cases by sampling variable values from distributions.
-
-Supported distributions:
+Monte Carlo mode generates many cases by sampling variable values from distributions. Supported distributions:
 
 - uniform
 - normal / gaussian
 - choice
 - truncated normal
 
-Truncated normal is implemented using rejection sampling.
-
 ### Sweep
 
-Sweep mode iterates through fixed values or generated ranges.
-
-Supported sweep forms:
+Sweep mode iterates through fixed values or generated ranges. Supported sweep forms:
 
 - explicit `values` list
 - `min` / `max` / `step` range
@@ -149,9 +124,7 @@ Sweep behavior supports:
 
 ## Parallel execution
 
-The project supports multiple worker threads for running simulations concurrently.
-
-The design is intentionally conservative:
+The project supports multiple worker threads for running simulations concurrently. The design is intentionally conservative:
 
 - the control file may set maximum thread count
 - the framework reduces this to a safe number
@@ -160,39 +133,21 @@ The design is intentionally conservative:
   - the number of cases
   - the detected physical CPU cores minus 2
 
-The goal is to avoid oversubscribing the machine.
-
 ### Physical core preference
 
-The framework makes a best-effort attempt to prefer physical CPU cores instead of hyperthreads.
-
-This is done using only the standard library. It is not CPU affinity pinning, and it does not require third-party packages.
+The framework makes a best-effort attempt to prefer physical CPU cores instead of hyperthreads. This is done using only the standard library. It is not CPU affinity pinning, and it does not require third-party packages.
 
 ### Worker directories
 
-Each worker gets its own directory under:
+Each case writes its files inside the worker directory, including logs and output files. Each worker gets its own directory under:
 
 ```text
 tmp/thread_<N>/
 ```
 
-This keeps runs isolated and avoids file collisions.
-
-Example:
-
-```text
-tmp/thread_01/
-tmp/thread_02/
-tmp/thread_03/
-```
-
-Each case writes its files inside the worker directory, including logs and output files.
-
 ### Manual cleanup
 
-Worker directories are preserved by default.
-
-That makes it easier to inspect logs after a run and manually delete only the directories you want to remove later.
+Worker directories are preserved by default. That makes it easier to inspect logs after a run and manually delete only the directories you want to remove later.
 
 ## Directory layout example
 
@@ -225,9 +180,7 @@ The project is structured around a small set of focused classes.
 
 ### `TemplateLoader`
 
-Reads the template file and extracts placeholder names.
-
-Responsibilities:
+Reads the template file and extracts placeholder names. Responsibilities:
 
 - load template text
 - extract placeholders
@@ -236,9 +189,7 @@ Responsibilities:
 
 ### `CaseGenerator`
 
-Generates all simulation cases.
-
-Responsibilities:
+Generates all simulation cases. Responsibilities:
 
 - generate Monte Carlo cases
 - generate sweep cases
@@ -247,20 +198,16 @@ Responsibilities:
 
 ### `DistributionSampler`
 
-Samples one value from one distribution definition.
-
-Responsibilities:
+Samples one value from one distribution definition. Responsibilities:
 
 - uniform sampling
 - normal sampling
 - choice sampling
-- truncated normal via rejection sampling
+- truncated normal
 
 ### `Renderer`
 
-Substitutes case values into the template.
-
-Responsibilities:
+Substitutes case values into the template. Responsibilities:
 
 - replace placeholders with case values
 - enforce strict missing-variable detection
@@ -317,16 +264,12 @@ Responsibilities:
 
 ### Monte Carlo generation
 
-Monte Carlo mode samples a value for each distribution variable in each case.
-
-Supported example distributions:
+Monte Carlo mode samples a value for each distribution variable in each case. A single seeded random number generator makes the case set reproducible. Supported example distributions:
 
 - uniform
 - normal
 - choice
 - truncated normal
-
-A single seeded random number generator makes the case set reproducible.
 
 ### Sweep generation
 
@@ -343,9 +286,7 @@ The output parser supports exactly two rule types.
 
 ### CSV parsing
 
-Use this when the simulation writes structured output with headers.
-
-Behavior:
+Use this when the simulation writes structured output with headers. Behavior:
 
 - read the file with `csv.DictReader`
 - map columns to result fields
@@ -354,9 +295,7 @@ Behavior:
 
 ### Regex parsing
 
-Use this when the output is plain text but predictable.
-
-Behavior:
+Use this when the output is plain text but predictable. Behavior:
 
 - search for a starting pattern
 - inspect nearby lines
@@ -426,7 +365,7 @@ This approach is intentionally simple and works well for text logs and summary b
 }
 ```
 
-## Example control file: nested sweep (two variables)
+## Example control file: nested sweep
 
 This example is equivalent to the loop:
 
