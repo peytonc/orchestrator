@@ -33,9 +33,10 @@ It handles the full workflow:
 python -m orchestrator.main control.json
 ```
 
-Useful options:
+Timeout behavior:
 
-- `--timeout SECONDS` sets a per-case execution timeout.
+- `execution.timeout_seconds` sets a per-case execution timeout.
+- If omitted, the default timeout is `1800` seconds (30 minutes).
 
 The run writes:
 
@@ -99,6 +100,7 @@ The control file is JSON with four top-level sections: `execution`, `paths`, `va
 - `prefer_physical_cores` (optional): `true`/`false`; prefers physical-core count when sizing workers (defaults to `true`).
 - `worker_dir_root` (optional): directory root for per-worker files (defaults to `"tmp"`).
 - `preserve_workdirs` (optional): keep worker directories after run (defaults to `true`).
+- `timeout_seconds` (optional): per-case subprocess timeout in seconds (defaults to `1800`).
 
 ### `paths` fields
 
@@ -364,7 +366,8 @@ This approach is intentionally simple and works well for text logs and summary b
     "max_cpu_threads": 999,
     "prefer_physical_cores": true,
     "worker_dir_root": "tmp",
-    "preserve_workdirs": true
+    "preserve_workdirs": true,
+    "timeout_seconds": 1800
   },
   "paths": {
     "template_file": "template.txt",
@@ -432,7 +435,8 @@ end
     "max_cpu_threads": 999,
     "prefer_physical_cores": true,
     "worker_dir_root": "tmp",
-    "preserve_workdirs": true
+    "preserve_workdirs": true,
+    "timeout_seconds": 1800
   },
   "paths": {
     "template_file": "template.txt",

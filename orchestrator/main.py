@@ -35,13 +35,6 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         default="control.json",
         help="Path to the JSON control file (default: control.json)",
     )
-    parser.add_argument(
-        "--timeout",
-        type=float,
-        default=None,
-        metavar="SECONDS",
-        help="Per-case subprocess timeout in seconds (default: no limit)",
-    )
     return parser
 
 
@@ -110,7 +103,7 @@ def main() -> int:
         return 1
 
     try:
-        orchestrator = WorkflowOrchestrator.from_config(config, args.timeout)
+        orchestrator = WorkflowOrchestrator.from_config(config)
     except (TemplateError, ControlError) as exc:
         print(f"[error] {exc}", file=sys.stderr)
         return 1
