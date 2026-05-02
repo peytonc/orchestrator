@@ -35,7 +35,6 @@ python -m orchestrator.main control.json
 
 Useful options:
 
-- `--dry-run` validates config/template and generates cases without launching the executable.
 - `--timeout SECONDS` sets a per-case execution timeout.
 
 The run writes:
