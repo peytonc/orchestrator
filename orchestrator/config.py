@@ -32,12 +32,17 @@ class ExecutionConfig:
         if mode not in {"monte_carlo", "sweep"}:
             raise ControlError(f"execution.mode must be 'monte_carlo' or 'sweep', got {mode!r}")
 
-        max_cases = int(data.get("max_cases", 0))
+        max_cases = cls._require_int(data, "max_cases", minimum=1)
         if max_cases <= 0:
             raise ControlError("execution.max_cases must be a positive integer")
 
-        random_seed = int(data.get("random_seed", 0))
-        max_cpu_threads = int(data.get("max_cpu_threads", _UNBOUNDED_THREADS))
+        random_seed = cls._require_int(data, "random_seed", default=0)
+        max_cpu_threads = cls._require_int(
+            data,
+            "max_cpu_threads",
+            default=_UNBOUNDED_THREADS,
+            minimum=1,
+        )
         if max_cpu_threads <= 0:
             raise ControlError("execution.max_cpu_threads must be a positive integer")
 
@@ -54,6 +59,35 @@ class ExecutionConfig:
             worker_dir_root=worker_dir_root,
             preserve_workdirs=preserve_workdirs,
         )
+
+    @staticmethod
+    def _require_int(
+        data: Dict[str, Any],
+        key: str,
+        *,
+        default: int | None = None,
+        minimum: int | None = None,
+    ) -> int:
+        raw = data.get(key, default)
+        if isinstance(raw, bool):
+            raise ControlError(f"execution.{key} must be an integer, not boolean")
+
+        if isinstance(raw, int):
+            value = raw
+        elif isinstance(raw, str):
+            text = raw.strip()
+            if not text:
+                raise ControlError(f"execution.{key} must be an integer")
+            try:
+                value = int(text)
+            except ValueError as exc:
+                raise ControlError(f"execution.{key} must be an integer") from exc
+        else:
+            raise ControlError(f"execution.{key} must be an integer")
+
+        if minimum is not None and value < minimum:
+            raise ControlError(f"execution.{key} must be >= {minimum}")
+        return value
 
 
 @dataclass(frozen=True)
