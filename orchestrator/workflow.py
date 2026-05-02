@@ -60,7 +60,6 @@ class WorkflowOrchestrator:
     def from_config(
         cls,
         config: ControlConfig,
-        timeout_seconds: float | None = None,
     ) -> "WorkflowOrchestrator":
         template_loader = TemplateLoader(config.paths.template_file).load()
         if not template_loader.text:
@@ -73,7 +72,7 @@ class WorkflowOrchestrator:
             case_generator=CaseGenerator(config),
             simulation_runner=SimulationRunner(
                 physics_command=config.paths.physics_command,
-                timeout_seconds=timeout_seconds,
+                timeout_seconds=config.execution.timeout_seconds,
             ),
             output_parser=OutputParser(),
             result_collector=ResultCollector(),

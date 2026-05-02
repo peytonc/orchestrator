@@ -25,6 +25,7 @@ class ExecutionConfig:
     prefer_physical_cores: bool = True
     worker_dir_root: str = "tmp"
     preserve_workdirs: bool = True
+    timeout_seconds: int = 1800
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ExecutionConfig":
@@ -49,6 +50,7 @@ class ExecutionConfig:
         prefer_physical_cores = bool(data.get("prefer_physical_cores", True))
         worker_dir_root = str(data.get("worker_dir_root", "tmp")).strip() or "tmp"
         preserve_workdirs = bool(data.get("preserve_workdirs", True))
+        timeout_seconds = cls._require_int(data, "timeout_seconds", default=1800, minimum=1)
 
         return cls(
             mode=mode,
@@ -58,6 +60,7 @@ class ExecutionConfig:
             prefer_physical_cores=prefer_physical_cores,
             worker_dir_root=worker_dir_root,
             preserve_workdirs=preserve_workdirs,
+            timeout_seconds=timeout_seconds,
         )
 
     @staticmethod
