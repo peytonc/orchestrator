@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import math
 from decimal import Decimal
-from itertools import product
 from random import Random
-from typing import Any, Dict, Iterator, List
+from typing import Any, Callable, Dict, Iterator, List, Tuple
 
 from .config import ControlConfig, ControlError, VariableSpec
 from .sampling import DistributionSampler
@@ -58,6 +57,12 @@ class CaseGenerator:
             raise ControlError(f"unsupported execution mode: {mode!r}")
 
     def generate_cases(self) -> List[Dict[str, Any]]:
+        max_cases = self.config.execution.max_cases
+        if max_cases > 100_000:
+            raise ControlError(
+                "generate_cases() would materialize too many cases in memory; "
+                "iterate with iter_cases() for large runs"
+            )
         return list(self.iter_cases())
 
     def _iter_monte_carlo_cases(self) -> Iterator[Dict[str, Any]]:
@@ -85,28 +90,41 @@ class CaseGenerator:
         if not sweep_vars:
             raise ControlError("sweep mode requires at least one sweep variable")
 
-        all_values = [self._sweep_values(var) for var in sweep_vars]
-        
-        for case_id, combo in enumerate(product(*all_values), start=1):
-            if case_id > self.config.execution.max_cases:
-                break
+        compiled_axes = [self._compile_axis(var) for var in sweep_vars]
+        lengths = [length for length, _ in compiled_axes]
+        getters = [getter for _, getter in compiled_axes]
+        names = [var.name for var in sweep_vars]
+
+        total_combinations = 1
+        for length in lengths:
+            total_combinations *= length
+
+        max_cases = min(self.config.execution.max_cases, total_combinations)
+
+        for case_id in range(1, max_cases + 1):
+            linear_index = case_id - 1
+            current_values: Dict[str, Any] = {}
+
+            for i in range(len(lengths) - 1, -1, -1):
+                linear_index, axis_index = divmod(linear_index, lengths[i])
+                current_values[names[i]] = getters[i](axis_index)
+
             yield {
                 "case_id": case_id,
                 "seed": None,
                 "mode": "sweep",
-                "values": {var.name: val for var, val in zip(sweep_vars, combo)},
+                "values": current_values,
             }
 
-    def _sweep_values(self, var: VariableSpec) -> List[Any]:
+    def _compile_axis(self, var: VariableSpec) -> Tuple[int, Callable[[int], Any]]:
         spec = var.data
 
         if "values" in spec:
             values = spec["values"]
             if not isinstance(values, list) or not values:
                 raise ControlError(f"{var.name!r}: sweep values must be a non-empty list")
-            return list(values)
+            return len(values), values.__getitem__
 
-        # Range form: min / max / step
         if not all(k in spec for k in ("min", "max", "step")):
             raise ControlError(
                 f"{var.name!r}: sweep variable must define either 'values' or 'min'/'max'/'step'"
@@ -120,7 +138,9 @@ class CaseGenerator:
                 raise ControlError(f"{var.name!r}: step must be > 0")
             if stop_int < start_int:
                 raise ControlError(f"{var.name!r}: max must be >= min")
-            return list(range(start_int, stop_int + 1, step_int))
+
+            axis_length = ((stop_int - start_int) // step_int) + 1
+            return axis_length, lambda idx: start_int + (idx * step_int)
 
         start = Decimal(str(spec["min"]))
         stop = Decimal(str(spec["max"]))
@@ -131,23 +151,18 @@ class CaseGenerator:
         if stop < start:
             raise ControlError(f"{var.name!r}: max must be >= min")
 
-        values: List[Any] = []
         max_iters = int(spec.get("max_iters", 1000000))
         if max_iters <= 0:
             raise ControlError(f"{var.name!r}: max_iters must be positive")
 
-        for i in range(max_iters):
-            current = start + (Decimal(i) * step)
-            if current > stop:
-                break
-            values.append(self._decimal_to_python(current))
-        else:
+        delta = stop - start
+        axis_length = int((delta // step) + 1)
+        if axis_length <= 0:
+            raise ControlError(f"{var.name!r}: sweep range produced no values")
+        if axis_length > max_iters:
             raise ControlError(f"{var.name!r}: exceeded max_iters while building sweep values")
 
-        if not values:
-            raise ControlError(f"{var.name!r}: sweep range produced no values")
-
-        return values
+        return axis_length, lambda idx: self._decimal_to_python(start + (Decimal(idx) * step))
 
     @staticmethod
     def _decimal_to_python(value: Decimal) -> Any:
