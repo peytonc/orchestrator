@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 from decimal import Decimal
 from random import Random
-from typing import Any, Callable, Dict, Iterator, List, Tuple
+from typing import Any, Callable, Dict, Iterator, Tuple
 
 from .config import ControlConfig, ControlError, VariableSpec
 from .sampling import DistributionSampler
@@ -55,15 +55,6 @@ class CaseGenerator:
             yield from self._iter_sweep_cases()
         else:
             raise ControlError(f"unsupported execution mode: {mode!r}")
-
-    def generate_cases(self) -> List[Dict[str, Any]]:
-        max_cases = self.config.execution.max_cases
-        if max_cases > 100_000:
-            raise ControlError(
-                "generate_cases() would materialize too many cases in memory; "
-                "iterate with iter_cases() for large runs"
-            )
-        return list(self.iter_cases())
 
     def _iter_monte_carlo_cases(self) -> Iterator[Dict[str, Any]]:
         dist_vars = [v for v in self.config.variables if v.kind == "distribution"]

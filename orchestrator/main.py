@@ -42,11 +42,6 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         metavar="SECONDS",
         help="Per-case subprocess timeout in seconds (default: no limit)",
     )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Validate config and template, generate cases, then exit without running simulations.",
-    )
     return parser
 
 
@@ -122,11 +117,6 @@ def main() -> int:
 
     _print_header(control_path, config)
     print(f"  Template placeholders : {sorted(orchestrator.template_loader.placeholders)}")
-
-    if args.dry_run:
-        cases = orchestrator.case_generator.generate_cases()
-        print(f"\n  [dry-run] {len(cases)} case(s) would be generated. Exiting.")
-        return 0
 
     print("\n  Starting simulation runs...\n")
     t0 = time.monotonic()
