@@ -21,6 +21,28 @@ It handles the full workflow:
 9. collect results
 10. write an aggregated results file
 
+
+## Quick start (for simulation users)
+
+1. Prepare your executable so it accepts **one input file path as its final CLI argument**.
+2. Create `template.txt` with placeholders like `{{TEMPERATURE}}`.
+3. Create `control.json` (examples below).
+4. Run:
+
+```bash
+python -m orchestrator.main control.json
+```
+
+Useful options:
+
+- `--dry-run` validates config/template and generates cases without launching the executable.
+- `--timeout SECONDS` sets a per-case execution timeout.
+
+The run writes:
+
+- per-case input/output/log files under `execution.worker_dir_root/thread_XX/`
+- aggregated JSON results at `paths.results_file`
+
 ## Design goals
 
 This project is intentionally simple and opinionated. The main goals are:
@@ -58,46 +80,83 @@ Before any simulation begins, the framework validates that:
 - placeholder syntax is valid
 - the template contains no malformed placeholder tokens
 
-## Control file
+## Control file reference (all supported fields)
 
-The control file is JSON. It is designed to be easy to parse with `json` and `dataclasses`, and it should remain clean and explicit.
+The control file is JSON with four top-level sections: `execution`, `paths`, `variables`, and `parsing`.
 
-### `execution`
+### Top-level structure
 
-Contains runtime settings such as:
+- `execution` (object, required): runtime behavior.
+- `paths` (object, required): input/output paths and executable command.
+- `variables` (array, required, non-empty): case-generation definitions.
+- `parsing` (array, required, may be empty): output extraction rules.
 
-- `mode`
-- `max_cases`
-- `random_seed`
-- `max_cpu_threads`
-- `prefer_physical_cores`
-- `worker_dir_root`
-- `preserve_workdirs`
+### `execution` fields
 
-### `paths`
+- `mode` (required): `"monte_carlo"` or `"sweep"`.
+- `max_cases` (required): positive integer; hard limit on generated/run cases.
+- `random_seed` (optional): integer seed for reproducible Monte Carlo sampling (defaults to `0`).
+- `max_cpu_threads` (optional): positive integer worker cap (defaults to `1`).
+- `prefer_physical_cores` (optional): `true`/`false`; prefers physical-core count when sizing workers (defaults to `true`).
+- `worker_dir_root` (optional): directory root for per-worker files (defaults to `"tmp"`).
+- `preserve_workdirs` (optional): keep worker directories after run (defaults to `true`).
 
-Contains file and command locations:
+### `paths` fields
 
-- `template_file`
-- `generated_input_file`
-- `physics_command`
-- `physics_output_file`
-- `results_file`
+- `template_file` (required): template input file path.
+- `generated_input_file` (required): base filename used for generated per-case inputs.
+- `physics_command` (required): string or string array command. The framework always appends the rendered input file path as the final argument.
+- `physics_output_file` (required): base filename expected from the physics program.
+- `results_file` (required): aggregated JSON output path.
 
-### `variables`
+### `variables` fields
 
-Defines the simulation variables. Each variable includes:
+Each item requires:
 
-- `name`
-- `kind`
+- `name`: placeholder variable name (example: `TEMPERATURE`).
+- `kind`: `"distribution"` (Monte Carlo) or `"sweep"` (deterministic sweep).
 
-### `parsing`
+For `kind: "distribution"`:
 
-Defines how to extract values from output files. Each rule includes:
+- `distribution` (required): `"uniform"`, `"normal"`/`"gaussian"`, `"choice"`, or `"truncated_normal"`.
+- `uniform`: requires `min`, `max`.
+- `normal`/`gaussian`: requires `mean`, `stddev`.
+- `choice`: requires `values` (non-empty array).
+- `truncated_normal`: requires `mean`, `stddev`, `min`, `max`.
 
-- `name`
-- `type`
-- `target_file`
+For `kind: "sweep"`:
+
+- Either `values` (explicit list), or all three of `min`, `max`, and `step`.
+
+Mode compatibility:
+
+- `monte_carlo` mode supports only `distribution` variables.
+- `sweep` mode supports only `sweep` variables.
+
+### `parsing` fields
+
+Each rule requires:
+
+- `name`: unique rule name.
+- `type`: `"csv"` or `"regex"`.
+- `target_file`: output filename to parse.
+
+For `type: "csv"`:
+
+- `columns` (required): mapping of result-field names to `{ "column": <header>, "type": <value_type> }`.
+
+For `type: "regex"`:
+
+- `start_pattern` (required): regex used to locate parse region start.
+- `captures` (required): mapping of result-field names to `{ "pattern": <regex>, "type": <value_type>, ... }`.
+- Optional: `context_before`, `context_after`, `required`.
+
+Supported value types:
+
+- `int`
+- `float`
+- `text`
+- `bool`
 
 ## Execution modes
 
@@ -108,7 +167,7 @@ Monte Carlo mode generates many cases by sampling variable values from distribut
 - uniform
 - normal / gaussian
 - choice
-- truncated normal
+- truncated_normal
 
 ### Sweep
 
@@ -191,7 +250,7 @@ Generates all simulation cases. Responsibilities:
 
 - generate Monte Carlo cases
 - generate sweep cases
-- support paired and Cartesian sweep behavior
+- support Cartesian sweep behavior based on variable order
 - produce deterministic case dictionaries
 
 ### `DistributionSampler`
@@ -201,7 +260,7 @@ Samples one value from one distribution definition. Responsibilities:
 - uniform sampling
 - normal sampling
 - choice sampling
-- truncated normal
+- truncated_normal
 
 ### `Renderer`
 
@@ -259,7 +318,7 @@ Monte Carlo mode samples a value for each distribution variable in each case. A 
 - uniform
 - normal
 - choice
-- truncated normal
+- truncated_normal
 
 ### Sweep generation
 
@@ -311,7 +370,7 @@ This approach is intentionally simple and works well for text logs and summary b
   "paths": {
     "template_file": "template.txt",
     "generated_input_file": "physics_input.txt",
-    "physics_command": "physics.exe",
+    "physics_command": ["physics.exe"],
     "physics_output_file": "physics_output.txt",
     "results_file": "results.json"
   },
@@ -323,8 +382,7 @@ This approach is intentionally simple and works well for text logs and summary b
       "mean": 300.0,
       "stddev": 12.5,
       "min": 250.0,
-      "max": 350.0,
-      "max_tries": 5000
+      "max": 350.0
     },
     {
       "name": "DISTANCE_1",
@@ -380,7 +438,7 @@ end
   "paths": {
     "template_file": "template.txt",
     "generated_input_file": "physics_input.txt",
-    "physics_command": "physics.exe",
+    "physics_command": ["physics.exe"],
     "physics_output_file": "physics_output.txt",
     "results_file": "results.json"
   },
