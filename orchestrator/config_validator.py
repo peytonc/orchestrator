@@ -147,6 +147,10 @@ class ConfigValidator:
                 self._validate_regex_rule(rule.data)
 
     def _validate_csv_rule(self, spec: dict[str, Any]) -> None:
+        target_file = str(spec.get("target_file", "")).strip()
+        if "target_file" in spec and not target_file:
+            raise ControlError("csv parsing rule target_file cannot be empty when provided")
+
         required_columns = spec.get("columns", {})
         if not isinstance(required_columns, dict) or not required_columns:
             raise ControlError("csv parsing rule requires a non-empty 'columns' mapping")
@@ -167,6 +171,10 @@ class ConfigValidator:
                 raise ControlError(f"unsupported conversion type: {converter!r}")
 
     def _validate_regex_rule(self, spec: dict[str, Any]) -> None:
+        target_file = str(spec.get("target_file", "")).strip()
+        if "target_file" in spec and not target_file:
+            raise ControlError("regex parsing rule target_file cannot be empty when provided")
+
         start_pattern = str(spec.get("start_pattern", "")).strip()
         if not start_pattern:
             raise ControlError("regex parsing rule requires 'start_pattern'")
@@ -176,10 +184,12 @@ class ConfigValidator:
             raise ControlError(f"invalid regex start_pattern: {start_pattern!r}") from exc
 
         try:
-            int(spec.get("context_before", 0))
-            int(spec.get("context_after", 5))
+            context_before = int(spec.get("context_before", 0))
+            context_after = int(spec.get("context_after", 5))
         except (ValueError, TypeError) as exc:
             raise ControlError("context_before/context_after must be integers") from exc
+        if context_before < 0 or context_after < 0:
+            raise ControlError("context_before/context_after must be non-negative")
 
         capture_map = spec.get("captures", {})
         if not isinstance(capture_map, dict) or not capture_map:
@@ -203,6 +213,12 @@ class ConfigValidator:
                 raise ControlError(f"invalid capture regex for {field_name!r}: {pattern!r}") from exc
             if converter not in self.SUPPORTED_VALUE_TYPES:
                 raise ControlError(f"unsupported conversion type: {converter!r}")
+            if isinstance(capture_spec, dict) and "required" in capture_spec and not isinstance(
+                capture_spec["required"], bool
+            ):
+                raise ControlError(
+                    f"regex capture {field_name!r} has invalid required flag; expected bool"
+                )
 
     @staticmethod
     def _require_number(spec: dict[str, Any], key: str, name: str) -> float:
