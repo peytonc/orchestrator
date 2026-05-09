@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import math
 from decimal import Decimal
 from random import Random
 from typing import Any, Callable, Dict, Iterator, Tuple
 
 from .config import ControlConfig, ControlError, VariableSpec
+from .config_validator import ConfigValidator
 from .sampling import DistributionSampler
 
 
@@ -92,7 +92,7 @@ class CaseGenerator:
             values = spec["values"]
             return len(values), values.__getitem__
 
-        if all(self._is_integral_number(spec[k]) for k in ("min", "max", "step")):
+        if all(ConfigValidator._is_integral_number(spec[k]) for k in ("min", "max", "step")):
             start_int = int(float(spec["min"]))
             stop_int = int(float(spec["max"]))
             step_int = int(float(spec["step"]))
@@ -118,19 +118,3 @@ class CaseGenerator:
         if value == value.to_integral_value():
             return int(value)
         return float(value)
-
-    @staticmethod
-    def _is_integral_number(value: Any) -> bool:
-        if isinstance(value, bool):
-            return False
-        if isinstance(value, int):
-            return True
-        if isinstance(value, float):
-            return math.isfinite(value) and value.is_integer()
-        if isinstance(value, str):
-            try:
-                num = float(value)
-                return math.isfinite(num) and num.is_integer()
-            except (ValueError, OverflowError):
-                return False
-        return False
