@@ -94,6 +94,8 @@ class ConfigValidator:
 
     def _validate_sweep_variable(self, var: VariableSpec) -> None:
         spec = var.data
+        if not isinstance(spec, dict):
+            raise ControlError(f"variable {var.name!r} data must be a dictionary configuration")
 
         if "values" in spec:
             values = spec["values"]
@@ -178,6 +180,8 @@ class ConfigValidator:
         start_pattern = str(spec.get("start_pattern", "")).strip()
         if not start_pattern:
             raise ControlError("regex parsing rule requires 'start_pattern'")
+        if "required" in spec and not isinstance(spec["required"], bool):
+            raise ControlError("regex parsing rule 'required' flag must be a boolean when provided")
         try:
             re.compile(start_pattern)
         except re.error as exc:
