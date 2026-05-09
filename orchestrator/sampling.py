@@ -1,10 +1,10 @@
 import math
 import statistics
-from collections.abc import Sequence
 from random import Random
 from typing import Any
 
 from .config import ControlError, VariableSpec
+from .config_validator import ConfigValidator
 
 
 class DistributionSampler:
@@ -19,14 +19,7 @@ class DistributionSampler:
     """
     
     def sample(self, var: VariableSpec, rng: Random) -> Any:
-        if var.kind != "distribution":
-            raise ControlError(f"variable {var.name!r} is not a distribution variable")
-
         spec = var.data
-        if not isinstance(spec, dict):
-            raise ControlError(f"variable {var.name!r} data must be a dictionary configuration")
-        if "distribution" not in spec:
-            raise ControlError(f"distribution variable {var.name!r} is missing 'distribution'")
         dist_val = spec["distribution"]
         dist = str(dist_val).strip().lower()
 
@@ -42,24 +35,16 @@ class DistributionSampler:
         raise ControlError(f"variable {var.name!r} has unsupported distribution {dist!r}")
 
     def _sample_uniform(self, name: str, spec: dict[str, Any], rng: Random) -> float:
-        low = self._require_number(spec, "min", name)
-        high = self._require_number(spec, "max", name)
-        
-        if high < low:
-            raise ControlError(f"{name!r}: max must be >= min")
-            
+        low = ConfigValidator._require_number(spec, "min", name)
+        high = ConfigValidator._require_number(spec, "max", name)
         return rng.uniform(low, high)
     
     def _sample_truncated_normal(self, name: str, spec: dict[str, Any], rng: Random) -> float:
-        mean = self._require_number(spec, "mean", name)
-        stddev = self._require_number(spec, "stddev", name)
-        if stddev <= 0:
-            raise ControlError(f"{name!r}: stddev must be > 0")
+        mean = ConfigValidator._require_number(spec, "mean", name)
+        stddev = ConfigValidator._require_number(spec, "stddev", name)
 
-        low = self._require_number(spec, "min", name)
-        high = self._require_number(spec, "max", name)
-        if high < low:
-            raise ControlError(f"{name!r}: max must be >= min")
+        low = ConfigValidator._require_number(spec, "min", name)
+        high = ConfigValidator._require_number(spec, "max", name)
         if low == high:
             return low
 
@@ -78,28 +63,10 @@ class DistributionSampler:
         return max(low, min(dist.inv_cdf(u), high))
 
     def _sample_normal(self, name: str, spec: dict[str, Any], rng: Random) -> float:
-        mean = self._require_number(spec, "mean", name)
-        stddev = self._require_number(spec, "stddev", name)
-        if stddev <= 0:
-            raise ControlError(f"{name!r}: stddev must be > 0")
+        mean = ConfigValidator._require_number(spec, "mean", name)
+        stddev = ConfigValidator._require_number(spec, "stddev", name)
         return rng.gauss(mean, stddev)
 
     def _sample_choice(self, name: str, spec: dict[str, Any], rng: Random) -> Any:
         values = spec.get("values")
-        if not isinstance(values, Sequence) or isinstance(values, (str, bytes)) or not values:
-            raise ControlError(
-                f"{name!r}: choice distribution requires a non-empty sequence of values"
-            )
         return rng.choice(values)
-
-    @staticmethod
-    def _require_number(spec: dict[str, Any], key: str, name: str) -> float:
-        if key not in spec:
-            raise ControlError(f"{name!r}: missing required field {key!r}")
-        try:
-            val = float(spec[key])
-            if not math.isfinite(val):
-                raise ControlError(f"{name!r}: field {key!r} must be a finite number")
-            return val
-        except (TypeError, ValueError) as exc:
-            raise ControlError(f"{name!r}: field {key!r} must be numeric") from exc

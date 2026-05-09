@@ -49,8 +49,6 @@ class OutputParser:
 
     def _parse_csv(self, output_path: Path, spec: Dict[str, Any]) -> Dict[str, Any]:
         required_columns = spec.get("columns", {})
-        if not isinstance(required_columns, dict) or not required_columns:
-            raise ControlError("csv parsing rule requires a non-empty 'columns' mapping")
 
         result_row: Dict[str, Any] = {}
         with output_path.open("r", encoding="utf-8", newline="") as f:
@@ -73,9 +71,6 @@ class OutputParser:
                 else:
                     raise ControlError("csv column mapping must be a string or object")
 
-                if not source_column:
-                    raise ControlError("csv column mapping missing source column name")
-
                 if source_column not in first_row:
                     raise ControlError(f"CSV column not found: {source_column!r}")
 
@@ -85,8 +80,6 @@ class OutputParser:
 
     def _parse_regex(self, lines: List[str], spec: Dict[str, Any]) -> Dict[str, Any]:
         start_pattern = str(spec.get("start_pattern", "")).strip()
-        if not start_pattern:
-            raise ControlError("regex parsing rule requires 'start_pattern'")
 
         required = bool(spec.get("required", True))
         try:
@@ -101,8 +94,6 @@ class OutputParser:
             raise ControlError(f"invalid regex start_pattern: {start_pattern!r}") from exc
 
         capture_map = spec.get("captures", {})
-        if not isinstance(capture_map, dict) or not capture_map:
-            raise ControlError("regex parsing rule requires a non-empty 'captures' mapping")
 
         match_index: Optional[int] = None
         for idx, line in enumerate(lines):
@@ -129,9 +120,6 @@ class OutputParser:
                 converter = str(capture_spec.get("type", "text")).strip().lower()
             else:
                 raise ControlError("regex capture mapping must be a string or object")
-
-            if not pattern:
-                raise ControlError(f"regex capture for {field_name!r} is missing 'pattern'")
 
             try:
                 capture_re = re.compile(pattern)

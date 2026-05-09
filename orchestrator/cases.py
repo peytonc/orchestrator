@@ -28,24 +28,6 @@ class CaseGenerator:
         self.config = config
         self._master_rng = Random(config.execution.random_seed)
         self._sampler = DistributionSampler()
-        self._validate_mode_variable_compatibility()
-
-    def _validate_mode_variable_compatibility(self) -> None:
-        mode = self.config.execution.mode
-        invalid_kinds_by_mode = {
-            "monte_carlo": "sweep",
-            "sweep": "distribution",
-        }
-        invalid_kind = invalid_kinds_by_mode.get(mode)
-        if not invalid_kind:
-            return
-
-        invalid_names = sorted(v.name for v in self.config.variables if v.kind == invalid_kind)
-        if invalid_names:
-            raise ControlError(
-                f"{mode} mode does not support {invalid_kind} variables: "
-                + ", ".join(invalid_names)
-            )
 
     def iter_cases(self) -> Iterator[Dict[str, Any]]:
         mode = self.config.execution.mode
@@ -58,8 +40,6 @@ class CaseGenerator:
 
     def _iter_monte_carlo_cases(self) -> Iterator[Dict[str, Any]]:
         dist_vars = [v for v in self.config.variables if v.kind == "distribution"]
-        if not dist_vars:
-            raise ControlError("monte_carlo mode requires at least one distribution variable")
 
         for case_id in range(1, self.config.execution.max_cases + 1):
             case_seed = self._master_rng.randrange(1 << 63)
@@ -78,8 +58,6 @@ class CaseGenerator:
 
     def _iter_sweep_cases(self) -> Iterator[Dict[str, Any]]:
         sweep_vars = [v for v in self.config.variables if v.kind == "sweep"]
-        if not sweep_vars:
-            raise ControlError("sweep mode requires at least one sweep variable")
 
         compiled_axes = [self._compile_axis(var) for var in sweep_vars]
         lengths = [length for length, _ in compiled_axes]
@@ -112,23 +90,12 @@ class CaseGenerator:
 
         if "values" in spec:
             values = spec["values"]
-            if not isinstance(values, list) or not values:
-                raise ControlError(f"{var.name!r}: sweep values must be a non-empty list")
             return len(values), values.__getitem__
-
-        if not all(k in spec for k in ("min", "max", "step")):
-            raise ControlError(
-                f"{var.name!r}: sweep variable must define either 'values' or 'min'/'max'/'step'"
-            )
 
         if all(self._is_integral_number(spec[k]) for k in ("min", "max", "step")):
             start_int = int(float(spec["min"]))
             stop_int = int(float(spec["max"]))
             step_int = int(float(spec["step"]))
-            if step_int <= 0:
-                raise ControlError(f"{var.name!r}: step must be > 0")
-            if stop_int < start_int:
-                raise ControlError(f"{var.name!r}: max must be >= min")
 
             axis_length = ((stop_int - start_int) // step_int) + 1
             return axis_length, lambda idx: start_int + (idx * step_int)
@@ -137,19 +104,10 @@ class CaseGenerator:
         stop = Decimal(str(spec["max"]))
         step = Decimal(str(spec["step"]))
 
-        if step <= 0:
-            raise ControlError(f"{var.name!r}: step must be > 0")
-        if stop < start:
-            raise ControlError(f"{var.name!r}: max must be >= min")
-
         max_iters = int(spec.get("max_iters", 1000000))
-        if max_iters <= 0:
-            raise ControlError(f"{var.name!r}: max_iters must be positive")
 
         delta = stop - start
         axis_length = int((delta // step) + 1)
-        if axis_length <= 0:
-            raise ControlError(f"{var.name!r}: sweep range produced no values")
         if axis_length > max_iters:
             raise ControlError(f"{var.name!r}: exceeded max_iters while building sweep values")
 
