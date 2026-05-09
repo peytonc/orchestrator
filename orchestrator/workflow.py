@@ -10,6 +10,7 @@ import shutil
 
 from .cases import CaseGenerator
 from .config import ControlConfig, ControlError
+from .config_validator import ConfigValidator
 from .parser import OutputParser
 from .render import Renderer
 from .results import ResultCollector
@@ -64,6 +65,7 @@ class WorkflowOrchestrator:
         template_loader = TemplateLoader(config.paths.template_file).load()
         if not template_loader.text:
             raise ControlError("template file is empty")
+        ConfigValidator().validate_control_config(config)
         config.validate_against_template(template_loader.placeholders)
 
         return cls(

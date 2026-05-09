@@ -1,4 +1,5 @@
 from .cases import CaseGenerator
+from .config_validator import ConfigValidator
 from .config import (
     ControlConfig,
     ControlError,
@@ -16,6 +17,7 @@ from .workflow import WorkflowOrchestrator
 
 __all__ = [
     "CaseGenerator",
+    "ConfigValidator",
     "ControlConfig",
     "ControlError",
     "ExecutionConfig",
