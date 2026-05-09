@@ -69,7 +69,7 @@ class OutputParser:
                     source_column = str(column_spec.get("column", "")).strip()
                     converter = str(column_spec.get("type", "text")).strip().lower()
                 else:
-                    raise ControlError("csv column mapping must be a string or object")
+                    raise ControlError("invalid validated config: csv column mapping must be a string or object")
 
                 if source_column not in first_row:
                     raise ControlError(f"CSV column not found: {source_column!r}")
@@ -82,16 +82,10 @@ class OutputParser:
         start_pattern = str(spec.get("start_pattern", "")).strip()
 
         required = bool(spec.get("required", True))
-        try:
-            context_before = int(spec.get("context_before", 0))
-            context_after = int(spec.get("context_after", 5))
-        except (ValueError, TypeError) as exc:
-            raise ControlError(f"context_before/context_after must be integers") from exc
-
-        try:
-            start_re = re.compile(start_pattern)
-        except re.error as exc:
-            raise ControlError(f"invalid regex start_pattern: {start_pattern!r}") from exc
+        # context and regex structure are validated by ConfigValidator.
+        context_before = int(spec.get("context_before", 0))
+        context_after = int(spec.get("context_after", 5))
+        start_re = re.compile(start_pattern)
 
         capture_map = spec.get("captures", {})
 
@@ -119,12 +113,9 @@ class OutputParser:
                 pattern = str(capture_spec.get("pattern", "")).strip()
                 converter = str(capture_spec.get("type", "text")).strip().lower()
             else:
-                raise ControlError("regex capture mapping must be a string or object")
+                raise ControlError("invalid validated config: regex capture mapping must be a string or object")
 
-            try:
-                capture_re = re.compile(pattern)
-            except re.error as exc:
-                raise ControlError(f"invalid capture regex for {field_name!r}: {pattern!r}") from exc
+            capture_re = re.compile(pattern)
 
             value = None
             for line in window:
