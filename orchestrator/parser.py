@@ -62,14 +62,7 @@ class OutputParser:
                 raise ControlError(f"CSV file is empty: {output_path}")
 
             for target_name, column_spec in required_columns.items():
-                if isinstance(column_spec, str):
-                    source_column = column_spec
-                    converter = "text"
-                elif isinstance(column_spec, dict):
-                    source_column = str(column_spec.get("column", "")).strip()
-                    converter = str(column_spec.get("type", "text")).strip().lower()
-                else:
-                    raise ControlError("invalid validated config: csv column mapping must be a string or object")
+                source_column, converter = self._resolve_csv_column_spec(column_spec)
 
                 if source_column not in first_row:
                     raise ControlError(f"CSV column not found: {source_column!r}")
@@ -106,14 +99,10 @@ class OutputParser:
 
         parsed: Dict[str, Any] = {}
         for field_name, capture_spec in capture_map.items():
-            if isinstance(capture_spec, str):
-                pattern = capture_spec
-                converter = "text"
-            elif isinstance(capture_spec, dict):
-                pattern = str(capture_spec.get("pattern", "")).strip()
-                converter = str(capture_spec.get("type", "text")).strip().lower()
-            else:
-                raise ControlError("invalid validated config: regex capture mapping must be a string or object")
+            pattern, converter, capture_required = self._resolve_regex_capture_spec(
+                capture_spec=capture_spec,
+                default_required=required,
+            )
 
             capture_re = re.compile(pattern)
 
@@ -128,13 +117,30 @@ class OutputParser:
                     break
 
             if value is None:
-                if bool(capture_spec.get("required", required)) if isinstance(capture_spec, dict) else required:
+                if capture_required:
                     raise ControlError(f"required regex value not found for field {field_name!r}")
                 parsed[field_name] = None
             else:
                 parsed[field_name] = self._convert_value(value, converter)
 
         return parsed
+
+    @staticmethod
+    def _resolve_csv_column_spec(column_spec: Any) -> tuple[str, str]:
+        if isinstance(column_spec, dict):
+            source_column = str(column_spec.get("column", "")).strip()
+            converter = str(column_spec.get("type", "text")).strip().lower()
+            return source_column, converter
+        return str(column_spec).strip(), "text"
+
+    @staticmethod
+    def _resolve_regex_capture_spec(capture_spec: Any, default_required: bool) -> tuple[str, str, bool]:
+        if isinstance(capture_spec, dict):
+            pattern = str(capture_spec.get("pattern", "")).strip()
+            converter = str(capture_spec.get("type", "text")).strip().lower()
+            capture_required = bool(capture_spec.get("required", default_required))
+            return pattern, converter, capture_required
+        return str(capture_spec).strip(), "text", default_required
 
     @staticmethod
     def _convert_value(raw: Any, kind: str) -> Any:
