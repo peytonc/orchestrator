@@ -3,6 +3,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from itertools import chain
+import logging
 from pathlib import Path
 from queue import Queue
 from typing import Any, Dict, Iterator, List
@@ -18,6 +19,8 @@ from .results import ResultCollector
 from .runner import SimulationRunner
 from .system_resources import SystemResourceDetector
 from .template import TemplateLoader
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -239,6 +242,15 @@ class WorkflowOrchestrator:
             if return_code != 0 and not run_info.errors:
                 errors.append(f"physics executable failed with return code {return_code}")
 
+            logger.info(
+                "case %s complete on worker %s (return_code=%s, warnings=%s, errors=%s)",
+                case_id,
+                worker_id,
+                return_code,
+                len(warnings),
+                len(errors),
+            )
+
             return {
                 "case_id": case_id,
                 "worker_id": worker_id,
@@ -255,9 +267,11 @@ class WorkflowOrchestrator:
 
         except (ControlError, OSError) as exc:
             errors.append(f"execution error ({exc.__class__.__name__}): {exc}")
+            logger.error("case %s execution error: %s", case_id, exc)
         except Exception as exc:
             errors.append(f"unexpected execution exception ({exc.__class__.__name__}): {exc}")
             errors.append(traceback.format_exc())
+            logger.exception("case %s unexpected execution exception", case_id)
 
         return {
             "case_id": case_id,

@@ -42,6 +42,13 @@ The run writes:
 
 - per-case input/output/log files under `execution.worker_dir_root/thread_XX/`
 - aggregated JSON results at `paths.results_file`
+- a run-level structured log file (default `execution.log_file = "orchestrator.log"`)
+
+Optional execution logging controls in `control.json`:
+
+- `execution.log_file` (string, optional): path for run-level log output.
+- `execution.log_level` (optional): either `DEBUG`/`INFO`/`WARNING`/`ERROR` or integer `1..4`.
+  - default is `2` (`INFO`), which records everything except debug-level details.
 
 ## Design goals
 

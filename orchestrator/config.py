@@ -26,6 +26,8 @@ class ExecutionConfig:
     worker_dir_root: str = "tmp"
     preserve_workdirs: bool = True
     timeout_seconds: int = 1800
+    log_file: str = "orchestrator.log"
+    log_level: str = "INFO"
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ExecutionConfig":
@@ -51,6 +53,8 @@ class ExecutionConfig:
         worker_dir_root = str(data.get("worker_dir_root", "tmp")).strip() or "tmp"
         preserve_workdirs = bool(data.get("preserve_workdirs", True))
         timeout_seconds = cls._require_int(data, "timeout_seconds", default=1800, minimum=1)
+        log_file = str(data.get("log_file", "orchestrator.log")).strip() or "orchestrator.log"
+        log_level = cls._normalize_log_level(data.get("log_level", 2))
 
         return cls(
             mode=mode,
@@ -61,7 +65,26 @@ class ExecutionConfig:
             worker_dir_root=worker_dir_root,
             preserve_workdirs=preserve_workdirs,
             timeout_seconds=timeout_seconds,
+            log_file=log_file,
+            log_level=log_level,
         )
+
+    @staticmethod
+    def _normalize_log_level(raw: Any) -> str:
+        if isinstance(raw, bool):
+            raise ControlError("execution.log_level must be an integer 1-4 or a log level string")
+
+        if isinstance(raw, int):
+            mapping = {1: "DEBUG", 2: "INFO", 3: "WARNING", 4: "ERROR"}
+            level = mapping.get(raw)
+            if level is None:
+                raise ControlError("execution.log_level integer must be in [1, 4]")
+            return level
+
+        text = str(raw).strip().upper()
+        if text in {"DEBUG", "INFO", "WARNING", "ERROR"}:
+            return text
+        raise ControlError("execution.log_level must be DEBUG, INFO, WARNING, ERROR, or integer 1-4")
 
     @staticmethod
     def _require_int(
