@@ -134,6 +134,7 @@ class WorkflowOrchestrator:
             self._slot_queue.put(worker_id)
 
         in_flight: dict[Any, None] = {}
+        unexpected_worker_failure = False
         with ThreadPoolExecutor(max_workers=worker_count) as executor:
             for _ in range(worker_count):
                 case = next(case_iter, None)
@@ -150,6 +151,7 @@ class WorkflowOrchestrator:
                 try:
                     record = done_future.result()
                 except Exception as exc:
+                    unexpected_worker_failure = True
                     tb = traceback.format_exc()
                     record = {
                         "case_id": -1, "worker_id": -1, "worker_dir": "", "input_path": "",
@@ -168,6 +170,9 @@ class WorkflowOrchestrator:
                     next_future = executor.submit(self._run_single_case, next_case, renderer)
                     in_flight[next_future] = None
                     completion_stream = as_completed(in_flight)
+
+        if unexpected_worker_failure:
+            raise ControlError("parallel execution encountered unexpected worker exceptions")
 
     def _run_single_case(self, case: Dict[str, Any], renderer: Renderer) -> Dict[str, Any]:
         worker_id = self._acquire_worker_id()
@@ -249,21 +254,24 @@ class WorkflowOrchestrator:
             }
 
         except (ControlError, OSError) as exc:
-            errors.append(str(exc))
-            return {
-                "case_id": case_id,
-                "worker_id": worker_id,
-                "worker_dir": worker_paths.worker_dir,
-                "input_path": worker_paths.input_path,
-                "output_path": worker_paths.output_path,
-                "return_code": -1,
-                "stdout_path": worker_paths.worker_dir / f"case_{case_id:05d}.stdout.log",
-                "stderr_path": worker_paths.worker_dir / f"case_{case_id:05d}.stderr.log",
-                "parsed": {},
-                "warnings": warnings,
-                "errors": errors,
-            }
+            errors.append(f"execution error ({exc.__class__.__name__}): {exc}")
+        except Exception as exc:
+            errors.append(f"unexpected execution exception ({exc.__class__.__name__}): {exc}")
+            errors.append(traceback.format_exc())
 
+        return {
+            "case_id": case_id,
+            "worker_id": worker_id,
+            "worker_dir": worker_paths.worker_dir,
+            "input_path": worker_paths.input_path,
+            "output_path": worker_paths.output_path,
+            "return_code": -1,
+            "stdout_path": worker_paths.worker_dir / f"case_{case_id:05d}.stdout.log",
+            "stderr_path": worker_paths.worker_dir / f"case_{case_id:05d}.stderr.log",
+            "parsed": {},
+            "warnings": warnings,
+            "errors": errors,
+        }
     def _build_worker_paths(self, worker_id: int, case_id: int) -> WorkerPaths:
         root = Path(self.config.execution.worker_dir_root)
         worker_dir = root / f"thread_{worker_id:02d}"
