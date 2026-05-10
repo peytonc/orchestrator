@@ -7,6 +7,7 @@ from pathlib import Path
 from queue import Queue
 from typing import Any, Dict, Iterator, List
 import shutil
+import traceback
 
 from .cases import CaseGenerator
 from .config import ControlConfig, ControlError
@@ -149,10 +150,16 @@ class WorkflowOrchestrator:
                 try:
                     record = done_future.result()
                 except Exception as exc:
+                    tb = traceback.format_exc()
                     record = {
                         "case_id": -1, "worker_id": -1, "worker_dir": "", "input_path": "",
                         "output_path": "", "return_code": -1, "stdout_path": "", "stderr_path": "",
-                        "parsed": {}, "warnings": [], "errors": [f"Unhandled worker exception: {exc}"],
+                        "parsed": {},
+                        "warnings": [],
+                        "errors": [
+                            f"Unhandled worker exception ({exc.__class__.__name__}): {exc}",
+                            tb,
+                        ],
                     }
                 self.result_collector.add(**record)
 
@@ -210,8 +217,13 @@ class WorkflowOrchestrator:
                         worker_paths.output_path,
                         self.config.parsing,
                     )
+                except (ControlError, OSError, ValueError) as exc:
+                    errors.append(f"output parse error ({exc.__class__.__name__}): {exc}")
                 except Exception as exc:
-                    errors.append(str(exc))
+                    errors.append(
+                        f"unexpected output parser exception ({exc.__class__.__name__}): {exc}"
+                    )
+                    errors.append(traceback.format_exc())
             else:
                 msg = f"output file missing: {worker_paths.output_path}"
                 if return_code == 0:
