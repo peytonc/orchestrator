@@ -7,8 +7,6 @@ import os
 import platform
 import subprocess
 
-logger = logging.getLogger(__name__)
-
 class SystemResourceDetector:
     """
     Best-effort physical-core detection using only the standard library.
@@ -16,7 +14,8 @@ class SystemResourceDetector:
     """
 
     @staticmethod
-    def physical_core_count() -> int:
+    def physical_core_count(logger: logging.Logger | None = None) -> int:
+        logger = logger or logging.getLogger(__name__)
         system = platform.system().lower()
 
         try:
@@ -25,11 +24,11 @@ class SystemResourceDetector:
                 if value:
                     return value
             elif system == "darwin":
-                value = SystemResourceDetector._mac_physical_cores()
+                value = SystemResourceDetector._mac_physical_cores(logger)
                 if value:
                     return value
             elif system == "windows":
-                value = SystemResourceDetector._windows_physical_cores()
+                value = SystemResourceDetector._windows_physical_cores(logger)
                 if value:
                     return value
         except (OSError, ValueError, subprocess.SubprocessError) as exc:
@@ -45,12 +44,14 @@ class SystemResourceDetector:
         requested: int,
         case_count: int,
         prefer_physical_cores: bool = True,
+        logger: logging.Logger | None = None,
     ) -> int:
+        logger = logger or logging.getLogger(__name__)
         requested = max(1, int(requested))
         case_count = max(1, int(case_count))
 
         if prefer_physical_cores:
-            physical = SystemResourceDetector.physical_core_count()
+            physical = SystemResourceDetector.physical_core_count(logger)
             safe_limit = max(1, physical - 2) if physical > 2 else 1
         else:
             logical = os.cpu_count() or 1
@@ -95,7 +96,7 @@ class SystemResourceDetector:
         return None
 
     @staticmethod
-    def _mac_physical_cores() -> Optional[int]:
+    def _mac_physical_cores(logger: logging.Logger) -> Optional[int]:
         try:
             proc = subprocess.run(
                 ["sysctl", "-n", "hw.physicalcpu"],
@@ -114,7 +115,7 @@ class SystemResourceDetector:
             return None
 
     @staticmethod
-    def _windows_physical_cores() -> Optional[int]:
+    def _windows_physical_cores(logger: logging.Logger) -> Optional[int]:
         commands = [
             [
                 "powershell",

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List
+import logging
 import subprocess
 import traceback
 
@@ -31,9 +32,15 @@ class SimulationRunner:
     output path already chosen inside a worker directory.
     """
 
-    def __init__(self, physics_command: List[str], timeout_seconds: int | float | None = None):
+    def __init__(
+        self,
+        physics_command: List[str],
+        timeout_seconds: int | float | None = None,
+        logger: logging.Logger | None = None,
+    ):
         self.physics_command = physics_command
         self.timeout_seconds = timeout_seconds
+        self.logger = logger or logging.getLogger(__name__)
 
     def run(
         self,
@@ -54,6 +61,7 @@ class SimulationRunner:
         stderr_path = worker_dir / f"case_{case_id:05d}.stderr.log"
 
         cmd = list(self.physics_command) + [str(input_path.resolve())]
+        self.logger.debug("running physics command for case %s on worker %s", case_id, worker_id)
 
         def _safe_write(path: Path, content: str) -> list[str]:
             try:
@@ -75,6 +83,7 @@ class SimulationRunner:
                 timeout=self.timeout_seconds,
             )
         except subprocess.TimeoutExpired as exc:
+            self.logger.error("simulation timeout for case %s after %s seconds", case_id, self.timeout_seconds)
             errors = [f"Simulation timed out after {self.timeout_seconds} seconds."]
             errors.extend(_safe_write(stdout_path, exc.stdout or ""))
             errors.extend(_safe_write(stderr_path, exc.stderr or ""))
@@ -86,6 +95,7 @@ class SimulationRunner:
                 errors=errors
             )
         except OSError as exc:
+            self.logger.error("failed to launch simulation for case %s: %s", case_id, exc)
             errors = [f"Failed to launch simulation command: {exc}"]
             errors.extend(_safe_write(stdout_path, ""))
             errors.extend(_safe_write(stderr_path, ""))
@@ -100,6 +110,7 @@ class SimulationRunner:
         errors: List[str] = []
         errors.extend(_safe_write(stdout_path, proc.stdout or ""))
         errors.extend(_safe_write(stderr_path, proc.stderr or ""))
+        self.logger.debug("simulation finished for case %s with return code %s", case_id, proc.returncode)
 
         return RunResult(
             case_id=case_id,
