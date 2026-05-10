@@ -41,37 +41,30 @@ def _build_arg_parser() -> argparse.ArgumentParser:
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _print_header(control_path: Path, config: ControlConfig) -> None:
-    print("=" * 60)
-    print("  orchestrator")
-    print("=" * 60)
-    print(f"  Control file : {control_path}")
-    print(f"  Mode         : {config.execution.mode}")
-    print(f"  Max cases    : {config.execution.max_cases}")
-    print(f"  Random seed  : {config.execution.random_seed}")
-    print(f"  Max threads  : {config.execution.max_cpu_threads}")
-    print(f"  Template     : {config.paths.template_file}")
-    print(f"  Results      : {config.paths.results_file}")
-    print("=" * 60)
+def _log_header(logger: logging.Logger, control_path: Path, config: ControlConfig) -> None:
+    logger.info("orchestrator")
+    logger.info("Control file : %s", control_path)
+    logger.info("Mode         : %s", config.execution.mode)
+    logger.info("Max cases    : %s", config.execution.max_cases)
+    logger.info("Random seed  : %s", config.execution.random_seed)
+    logger.info("Max threads  : %s", config.execution.max_cpu_threads)
+    logger.info("Template     : %s", config.paths.template_file)
+    logger.info("Results      : %s", config.paths.results_file)
 
 
-def _print_summary(records: list, elapsed: float) -> None:
+def _log_summary(logger: logging.Logger, records: list, elapsed: float) -> None:
     total   = len(records)
     success = sum(1 for r in records if r.get("success"))
     failed  = total - success
 
-    print()
-    print("=" * 60)
-    print("  Run complete")
-    print("=" * 60)
-    print(f"  Total cases : {total}")
-    print(f"  Succeeded   : {success}")
-    print(f"  Failed      : {failed}")
-    print(f"  Elapsed     : {elapsed:.1f}s")
+    logger.info("Run complete")
+    logger.info("Total cases : %s", total)
+    logger.info("Succeeded   : %s", success)
+    logger.info("Failed      : %s", failed)
+    logger.info("Elapsed     : %.1fs", elapsed)
 
     if failed:
-        print()
-        print(f"  {failed} case(s) with errors:")
+        logger.warning("%s case(s) with errors", failed)
         for r in records:
             if not r.get("success"):
                 errs = r.get("errors")
@@ -82,9 +75,7 @@ def _print_summary(records: list, elapsed: float) -> None:
                 else:
                     short = "unknown error"
                 case_id = r.get("case_id", "N/A")
-                print(f"    case {case_id:>5}  {short}")
-
-    print("=" * 60)
+                logger.warning("case %5s %s", case_id, short)
 
 
 def _configure_file_logging(log_file: Path, log_level: str) -> None:
@@ -103,13 +94,15 @@ def main() -> int:
     args = parser.parse_args()
     control_path = Path(args.control_file)
 
+    _configure_file_logging(Path("orchestrator.log"), "INFO")
+
     try:
         config = ControlConfig.load_json(control_path)
     except FileNotFoundError:
-        print(f"[error] control file not found: {control_path}", file=sys.stderr)
+        logging.getLogger(__name__).error("control file not found: %s", control_path)
         return 1
     except ControlError as exc:
-        print(f"[error] invalid control file: {exc}", file=sys.stderr)
+        logging.getLogger(__name__).error("invalid control file: %s", exc)
         return 1
     log_file = Path(config.execution.log_file)
     _configure_file_logging(log_file, config.execution.log_level)
@@ -117,30 +110,26 @@ def main() -> int:
     logger.info("orchestrator starting with control file: %s", control_path)
 
     try:
-        orchestrator = WorkflowOrchestrator.from_config(config)
+        orchestrator = WorkflowOrchestrator.from_config(config, logger=logger)
     except (TemplateError, ControlError) as exc:
         logger.error("configuration failed: %s", exc)
-        print(f"[error] {exc}", file=sys.stderr)
         return 1
 
-    _print_header(control_path, config)
-    print(f"  Template placeholders : {sorted(orchestrator.template_loader.placeholders)}")
-
-    print("\n  Starting simulation runs...\n")
+    _log_header(logger, control_path, config)
+    logger.info("Template placeholders : %s", sorted(orchestrator.template_loader.placeholders))
+    logger.info("Starting simulation runs")
     t0 = time.monotonic()
 
     try:
         records = orchestrator.run()
     except ControlError as exc:
         logger.error("pipeline failed: %s", exc)
-        print(f"\n[error] pipeline failed: {exc}", file=sys.stderr)
         return 1
     except KeyboardInterrupt:
         logger.warning("simulation interrupted by user")
-        print("\n[warning] simulation interrupted by user.", file=sys.stderr)
         return 130
 
-    _print_summary(records, time.monotonic() - t0)
+    _log_summary(logger, records, time.monotonic() - t0)
     logger.info(
         "run complete: total=%d succeeded=%d failed=%d",
         len(records),

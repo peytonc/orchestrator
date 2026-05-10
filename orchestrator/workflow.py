@@ -20,9 +20,6 @@ from .runner import SimulationRunner
 from .system_resources import SystemResourceDetector
 from .template import TemplateLoader
 
-logger = logging.getLogger(__name__)
-
-
 @dataclass(frozen=True)
 class WorkerPaths:
     worker_id: int
@@ -51,6 +48,7 @@ class WorkflowOrchestrator:
         simulation_runner: SimulationRunner,
         output_parser: OutputParser,
         result_collector: ResultCollector,
+        logger: logging.Logger | None = None,
     ) -> None:
         self.config = config
         self.template_loader = template_loader
@@ -58,6 +56,7 @@ class WorkflowOrchestrator:
         self.simulation_runner = simulation_runner
         self.output_parser = output_parser
         self.result_collector = result_collector
+        self.logger = logger or logging.getLogger(__name__)
 
         self._slot_queue: Queue[int] = Queue()
 
@@ -65,6 +64,7 @@ class WorkflowOrchestrator:
     def from_config(
         cls,
         config: ControlConfig,
+        logger: logging.Logger | None = None,
     ) -> "WorkflowOrchestrator":
         template_loader = TemplateLoader(config.paths.template_file).load()
         if not template_loader.text:
@@ -79,9 +79,11 @@ class WorkflowOrchestrator:
             simulation_runner=SimulationRunner(
                 physics_command=config.paths.physics_command,
                 timeout_seconds=config.execution.timeout_seconds,
+                logger=logger,
             ),
             output_parser=OutputParser(),
             result_collector=ResultCollector(),
+            logger=logger,
         )
 
     def run(self) -> List[Dict[str, Any]]:
@@ -104,6 +106,7 @@ class WorkflowOrchestrator:
             requested=self.config.execution.max_cpu_threads,
             case_count=self.config.execution.max_cases,
             prefer_physical_cores=self.config.execution.prefer_physical_cores,
+            logger=self.logger,
         )
 
         if worker_count <= 1:
@@ -242,7 +245,7 @@ class WorkflowOrchestrator:
             if return_code != 0 and not run_info.errors:
                 errors.append(f"physics executable failed with return code {return_code}")
 
-            logger.info(
+            self.logger.info(
                 "case %s complete on worker %s (return_code=%s, warnings=%s, errors=%s)",
                 case_id,
                 worker_id,
@@ -267,11 +270,11 @@ class WorkflowOrchestrator:
 
         except (ControlError, OSError) as exc:
             errors.append(f"execution error ({exc.__class__.__name__}): {exc}")
-            logger.error("case %s execution error: %s", case_id, exc)
+            self.logger.error("case %s execution error: %s", case_id, exc)
         except Exception as exc:
             errors.append(f"unexpected execution exception ({exc.__class__.__name__}): {exc}")
             errors.append(traceback.format_exc())
-            logger.exception("case %s unexpected execution exception", case_id)
+            self.logger.exception("case %s unexpected execution exception", case_id)
 
         return {
             "case_id": case_id,
