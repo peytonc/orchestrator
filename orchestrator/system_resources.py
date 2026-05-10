@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Optional
+import logging
 import os
 import platform
 import subprocess
 
+logger = logging.getLogger(__name__)
 
 class SystemResourceDetector:
     """
@@ -30,8 +32,10 @@ class SystemResourceDetector:
                 value = SystemResourceDetector._windows_physical_cores()
                 if value:
                     return value
+        except (OSError, ValueError, subprocess.SubprocessError) as exc:
+            logger.debug("physical core detection probe failed: %s", exc)
         except Exception:
-            pass
+            logger.exception("unexpected physical core detection error")
 
         fallback = os.cpu_count() or 1
         return max(1, fallback)
@@ -102,7 +106,11 @@ class SystemResourceDetector:
             )
             value = int(proc.stdout.strip())
             return value if value > 0 else None
+        except (OSError, ValueError, subprocess.SubprocessError) as exc:
+            logger.debug("macOS physical core probe failed: %s", exc)
+            return None
         except Exception:
+            logger.exception("unexpected macOS physical core probe error")
             return None
 
     @staticmethod
@@ -148,7 +156,11 @@ class SystemResourceDetector:
                 else:
                     value = int(text.splitlines()[-1].strip())
                     return value if value > 0 else None
+            except (OSError, ValueError, subprocess.SubprocessError) as exc:
+                logger.debug("Windows physical core probe failed for %s: %s", cmd[0], exc)
+                continue
             except Exception:
+                logger.exception("unexpected Windows physical core probe error for %s", cmd[0])
                 continue
 
         return None
