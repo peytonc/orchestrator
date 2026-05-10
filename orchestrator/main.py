@@ -2,9 +2,9 @@
 main.py — entry point for the orchestrator simulation pipeline.
 
 Usage:
-    python main.py                        # uses control.json in the current directory
-    python main.py control.json           # explicit control file
-    python main.py --help
+    python -m orchestrator.main                        # uses control.json in the current directory
+    python -m orchestrator.main control.json           # explicit control file
+    python -m orchestrator.main --help
 """
 
 from __future__ import annotations
