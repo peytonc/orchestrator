@@ -140,7 +140,7 @@ Each rule requires:
 
 - `name`: unique rule name.
 - `type`: `"csv"` or `"regex"`.
-- `target_file`: output filename to parse.
+- `target_file` (optional): output filename to parse. If omitted, the default physics output file is parsed.
 
 For `type: "csv"`:
 
