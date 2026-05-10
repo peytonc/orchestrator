@@ -6,7 +6,9 @@
     "max_cpu_threads": 4,
     "prefer_physical_cores": true,
     "worker_dir_root": "tmp",
-    "preserve_workdirs": false
+    "preserve_workdirs": false,
+    "log_file": "orchestrator.log",
+    "log_level": 2
   },
   "paths": {
     "template_file": "template.txt",
