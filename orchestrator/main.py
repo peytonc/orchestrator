@@ -84,6 +84,7 @@ def _configure_file_logging(log_file: Path, log_level: str) -> None:
         level=getattr(logging, log_level.upper(), logging.INFO),
         format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
         handlers=[logging.FileHandler(log_file, encoding="utf-8")],
+        force=True,
     )
 
 
